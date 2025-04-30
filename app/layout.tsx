@@ -1,6 +1,3 @@
-import DeployButton from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import HeaderAuth from "@/components/header-auth";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
 import { Geist } from "next/font/google";
@@ -14,8 +11,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "PortofolioSiswa - Student Academic Records",
+  description: "A platform to store and manage student academic records",
 };
 
 const geistSans = Geist({
@@ -37,39 +34,75 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="min-h-screen flex flex-col items-center">
-            <div className="flex-1 w-full flex flex-col gap-20 items-center">
-              <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-                <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-                  <div className="flex gap-5 items-center font-semibold">
-                    <Link href={"/"}>Next.js Supabase Starter</Link>
-                    <div className="flex items-center gap-2">
-                      <DeployButton />
-                    </div>
+          <div className="min-h-screen flex flex-col">
+            <nav className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="container flex h-16 items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <Link href="/" className="font-bold text-xl">
+                    PortofolioSiswa
+                  </Link>
+                  <div className="hidden md:flex gap-6">
+                    <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      Features
+                    </Link>
+                    <Link href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      About
+                    </Link>
                   </div>
-                  {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
                 </div>
-              </nav>
-              <div className="flex flex-col gap-20 max-w-5xl p-5">
-                {children}
+                <div className="flex items-center gap-4">
+                  <ThemeSwitcher />
+                  <div className="hidden sm:flex">
+                    <Link 
+                      href="/sign-in" 
+                      className="px-4 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
+                </div>
               </div>
-
-              <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-                <p>
-                  Powered by{" "}
-                  <a
-                    href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-                    target="_blank"
-                    className="font-bold hover:underline"
-                    rel="noreferrer"
-                  >
-                    Supabase
-                  </a>
-                </p>
-                <ThemeSwitcher />
-              </footer>
-            </div>
-          </main>
+            </nav>
+            <main className="flex-1">
+              {children}
+            </main>
+            <footer className="border-t py-12 md:py-16">
+              <div className="container grid gap-8 md:grid-cols-2">
+                <div>
+                  <Link href="/" className="font-bold text-xl">
+                    PortofolioSiswa
+                  </Link>
+                  <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                    A modern platform for tracking and managing student academic records.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-12">
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Platform</div>
+                    <ul className="space-y-2">
+                      <li>
+                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link>
+                      </li>
+                      <li>
+                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Legal</div>
+                    <ul className="space-y-2">
+                      <li>
+                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+                      </li>
+                      <li>
+                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </footer>
+          </div>
         </ThemeProvider>
       </body>
     </html>
