@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import "./globals.css";
+import LandingNav from "@/components/landingNav";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -35,34 +36,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen flex flex-col">
-            <nav className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="container flex h-16 items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <Link href="/" className="font-bold text-xl">
-                    PortofolioSiswa
-                  </Link>
-                  <div className="hidden md:flex gap-6">
-                    <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                      Features
-                    </Link>
-                    <Link href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                      About
-                    </Link>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <ThemeSwitcher />
-                  <div className="hidden sm:flex">
-                    <Link 
-                      href="/sign-in" 
-                      className="px-4 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors"
-                    >
-                      Sign In
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </nav>
+            <LandingNav />
             <main className="flex-1">
               {children}
             </main>
