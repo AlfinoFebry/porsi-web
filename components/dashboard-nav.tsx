@@ -33,6 +33,7 @@ export function DashboardNav() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Get collapse state from localStorage on mount
@@ -41,6 +42,13 @@ export function DashboardNav() {
     if (savedState !== null) {
       setIsCollapsed(JSON.parse(savedState));
     }
+    
+    // Set a small timeout to prevent flash
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
   
   // Save collapse state to localStorage when it changes
@@ -100,6 +108,15 @@ export function DashboardNav() {
   const toggleUserDropdown = () => {
     setIsUserDropdownOpen(!isUserDropdownOpen);
   };
+  
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+        <div className="h-16 w-16 border-4 border-t-primary rounded-full animate-spin"></div>
+        <p className="mt-6 text-white/90 text-lg font-medium">Please wait...</p>
+      </div>
+    );
+  }
 
   return (
     <>

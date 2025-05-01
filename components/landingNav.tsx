@@ -6,7 +6,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function LandingNav() {
   const [signedIn, setSignedIn] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false); // <- new loading state
+  const [authChecked, setAuthChecked] = useState(false); // <- loading state
 
   useEffect(() => {
     const supabase = createClientComponentClient();
@@ -26,7 +26,12 @@ export default function LandingNav() {
   }, []);
 
   if (!authChecked) {
-    return null; // prevent flash of wrong UI
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+        <div className="h-16 w-16 border-4 border-t-primary rounded-full animate-spin"></div>
+        <p className="mt-6 text-white/90 text-lg font-medium">Please wait...</p>
+      </div>
+    );
   }
 
   const navClass = [
