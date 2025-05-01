@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import { 
   BarChart3, 
   FilePlus, 
@@ -11,7 +11,8 @@ import {
   User,
   LogOut,
   Menu,
-  X
+  X,
+  ChevronDown
 } from "lucide-react";
 import { ThemeSwitcher } from "./theme-switcher";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ export function DashboardNav() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Get collapse state from localStorage on mount
   useEffect(() => {
@@ -46,6 +49,20 @@ export function DashboardNav() {
     // Dispatch custom event to notify other components
     window.dispatchEvent(new Event('sidebarStateChange'));
   }, [isCollapsed]);
+
+  // Handle clicking outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsUserDropdownOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   
   const navItems: NavItem[] = [
     {
@@ -80,6 +97,10 @@ export function DashboardNav() {
     setIsCollapsed(!isCollapsed);
   };
 
+  const toggleUserDropdown = () => {
+    setIsUserDropdownOpen(!isUserDropdownOpen);
+  };
+
   return (
     <>
       {/* Desktop Header */}
@@ -98,13 +119,38 @@ export function DashboardNav() {
         </div>
         <div className="ml-auto flex items-center gap-4 px-4">
           <ThemeSwitcher />
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col">
-              <div className="text-sm font-medium">{user?.email?.split('@')[0]}</div>
-            </div>
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={toggleUserDropdown}
+              className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors"
+            >
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-4 w-4" />
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="text-sm font-medium">{user?.email?.split('@')[0]}</div>
+                <ChevronDown className="h-4 w-4" />
+              </div>
+            </button>
+            
+            {isUserDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 py-1 bg-background border rounded-md shadow-lg z-30">
+                <div className="px-4 py-2 text-xs text-muted-foreground border-b">
+                  {user?.email}
+                </div>
+                <div className="pt-2">
+                  <Link href="/dashboard/settings" className="block px-4 py-2 text-sm hover:bg-accent">
+                    Account Settings
+                  </Link>
+                  <button 
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>

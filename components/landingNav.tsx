@@ -6,22 +6,29 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function LandingNav() {
   const [signedIn, setSignedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false); // <- new loading state
 
   useEffect(() => {
     const supabase = createClientComponentClient();
+
     supabase.auth.getSession().then(({ data }) => {
       setSignedIn(!!data.session);
+      setAuthChecked(true); // <- auth check done
     });
-    // Optional: Listen for auth changes
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSignedIn(!!session);
     });
+
     return () => {
       listener?.subscription.unsubscribe();
     };
   }, []);
 
-  // Hide on md+ if signed in, show always on mobile, show always if not signed in
+  if (!authChecked) {
+    return null; // prevent flash of wrong UI
+  }
+
   const navClass = [
     "sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
     signedIn ? "md:hidden" : ""
@@ -45,14 +52,16 @@ export default function LandingNav() {
         </div>
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
-          <div className="hidden sm:flex">
-            <Link 
-              href="/sign-in" 
-              className="px-4 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
+          {!signedIn && (
+            <div className="hidden sm:flex">
+              <Link 
+                href="/sign-in" 
+                className="px-4 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors"
+              >
+                Sign In
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </nav>
