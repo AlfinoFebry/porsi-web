@@ -102,3 +102,26 @@ Please file feedback and issues over on the [Supabase GitHub org](https://github
 - [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
 - [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
 - [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+
+## Google OAuth Setup
+
+To enable Google authentication, follow these steps:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Navigate to "APIs & Services" > "Credentials"
+4. Click "Create Credentials" and select "OAuth client ID"
+5. Configure the consent screen if prompted
+6. For Application type, select "Web application"
+7. Add your app's URL to the "Authorized JavaScript origins" (e.g., `http://localhost:3000`)
+8. Add your redirect URL to "Authorized redirect URIs" (e.g., `http://localhost:3000/auth/callback`)
+9. Click "Create" and note your Client ID and Client Secret
+
+Then in your Supabase project:
+
+1. Go to Authentication > Providers
+2. Enable Google provider
+3. Enter the Client ID and Client Secret from Google Cloud Console
+4. Save changes
+
+Your Google OAuth integration should now be working!
