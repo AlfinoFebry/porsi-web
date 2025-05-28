@@ -58,12 +58,18 @@ export default function LandingNav() {
         <div className="flex items-center gap-4">
           <ThemeSwitcher />
           {!signedIn && (
-            <div className="hidden sm:flex">
+            <div className="hidden sm:flex gap-2">
               <Link 
                 href="/sign-in" 
                 className="px-4 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors"
               >
                 Sign In
+              </Link>
+              <Link 
+                href="/register" 
+                className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
+              >
+                Register
               </Link>
             </div>
           )}
