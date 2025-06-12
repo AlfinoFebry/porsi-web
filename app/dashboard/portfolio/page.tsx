@@ -11,6 +11,8 @@ interface UserProfile {
   user_type: "siswa" | "alumni";
   gender: "male" | "female";
   date_of_birth: string;
+  hobby?: string;
+  desired_major?: string;
   // Student fields
   nama_sekolah?: string;
   jurusan?: "IPA" | "IPS";
@@ -30,6 +32,21 @@ interface AcademicRecord {
   school_year?: string;
 }
 
+interface Achievement {
+  id: string;
+  title: string;
+  image_url: string | null;
+  created_at: string;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  year: string | null;
+  position: string | null;
+  created_at: string;
+}
+
 function getGradeFromScore(score: number): string {
   if (score >= 90) return "A";
   if (score >= 80) return "B+";
@@ -42,6 +59,8 @@ function getGradeFromScore(score: number): string {
 export default function PortfolioPage() {
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +118,30 @@ export default function PortfolioPage() {
         setAcademicRecords([]);
       } else {
         setAcademicRecords(records || []);
+      }
+
+      // Fetch recent achievements (latest 5)
+      const { data: ach, error: achError } = await supabase
+        .from('achievements')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (!achError) {
+        setAchievements(ach || []);
+      }
+
+      // Fetch recent organizations (latest 5)
+      const { data: orgs, error: orgError } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (!orgError) {
+        setOrganizations(orgs || []);
       }
 
     } catch (error: any) {
@@ -297,6 +340,24 @@ export default function PortfolioPage() {
                   </div>
                 )}
               </div>
+
+              {/* Hobby & Desired Major */}
+              {(userData.hobby || userData.desired_major) && (
+                <div className="pt-2 space-y-2 border-t">
+                  {userData.hobby && (
+                    <div className="text-sm flex justify-between">
+                      <span>Hobi</span>
+                      <span className="font-medium">{userData.hobby}</span>
+                    </div>
+                  )}
+                  {userData.desired_major && (
+                    <div className="text-sm flex justify-between">
+                      <span>Target Jurusan</span>
+                      <span className="font-medium">{userData.desired_major}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -368,6 +429,51 @@ export default function PortfolioPage() {
             )}
           </div>
         </div>
+
+        {/* Achievements & Organizations Section */}
+        {(achievements.length > 0 || organizations.length > 0) && (
+          <div className="md:col-span-3 space-y-8">
+            {achievements.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-xl font-semibold flex items-center gap-2">Prestasi/Sertifikat</h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {achievements.map((ach) => (
+                    <div key={ach.id} className="border rounded-lg p-4 space-y-2">
+                      {ach.image_url ? (
+                        <img src={ach.image_url} alt={ach.title} className="w-full h-32 object-cover rounded" />
+                      ) : (
+                        <div className="w-full h-32 flex items-center justify-center bg-muted rounded">
+                          <span className="text-sm text-muted-foreground">No Image</span>
+                        </div>
+                      )}
+                      <p className="font-medium text-sm truncate" title={ach.title}>{ach.title}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(ach.created_at).toLocaleDateString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {organizations.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-xl font-semibold">Organisasi</h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {organizations.map((org) => (
+                    <div key={org.id} className="border rounded-lg p-4 space-y-1">
+                      <p className="font-medium text-sm">{org.name}</p>
+                      {org.position && (
+                        <p className="text-xs text-muted-foreground">Posisi: {org.position}</p>
+                      )}
+                      {org.year && (
+                        <p className="text-xs text-muted-foreground">Tahun: {org.year}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

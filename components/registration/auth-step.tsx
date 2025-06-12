@@ -35,7 +35,7 @@ export function AuthStep({ onSuccess }: AuthStepProps) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=/register`,
         },
       });
 

@@ -73,12 +73,22 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading 
     return allSubjects.filter(subject => !currentSubjects.includes(subject));
   };
 
-  // Determine number of semesters based on class
+  // Determine number of semesters to be filled based on user type and class
   const getSemesterCount = () => {
-    if (userType === "siswa" && biodataForm.class === "10") {
-      return 1; // Only semester 1 for class 10
+    if (userType === "siswa") {
+      switch (biodataForm.class) {
+        case "10":
+          return 1; // kelas 10 – semester 1
+        case "11":
+          return 3; // kelas 11 – semester 1–3
+        case "12":
+          return 5; // kelas 12 – semester 1–5
+        default:
+          return 4; // fallback (should not happen)
+      }
     }
-    return 4; // Semesters 1-4 for others
+    // Alumni harus memasukkan hingga semester 6
+    return 6;
   };
 
   const availableSubjects = getAvailableSubjects();
