@@ -10,6 +10,8 @@ import { AuthStep } from "@/components/registration/auth-step";
 import { UserTypeStep } from "@/components/registration/user-type-step";
 import { BiodataStep } from "@/components/registration/biodata-step";
 import { ReportStep } from "@/components/registration/report-step";
+import { AchievementStep, AchievementItem } from "@/components/registration/achievement-step";
+import { OrganizationStep, OrganizationItem } from "@/components/registration/organization-step";
 import { useToast } from "@/hooks/use-toast";
 
 export type UserType = "siswa" | "alumni";
@@ -48,6 +50,10 @@ export default function RegisterPage() {
     gender: "male",
   });
   const [reportData, setReportData] = useState<ReportData>({});
+  const [achievements, setAchievements] = useState<AchievementItem[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationItem[]>([]);
+  const [hobby, setHobby] = useState<string>("");
+  const [desiredMajor, setDesiredMajor] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
@@ -59,6 +65,8 @@ export default function RegisterPage() {
     { title: "Profil", description: "Pilih status Anda" },
     { title: "Biodata", description: "Isi data pribadi" },
     { title: "Rapor", description: "Input nilai rapor" },
+    { title: "Prestasi", description: "Tambah sertifikat" },
+    { title: "Organisasi", description: "Minat & organisasi" },
   ];
 
   const handleAuthSuccess = () => {
@@ -75,24 +83,37 @@ export default function RegisterPage() {
     setCurrentStep(4);
   };
 
-  const handleReportSubmit = async (data: ReportData) => {
+  const handleReportNext = (data: ReportData) => {
+    setReportData(data);
+    setCurrentStep(5);
+  };
+
+  const handleAchievementNext = (data: AchievementItem[]) => {
+    setAchievements(data);
+    setCurrentStep(6);
+  };
+
+  const handleOrganizationSubmit = async (data: { organizations: OrganizationItem[]; hobby: string; desiredMajor: string; }) => {
     setIsLoading(true);
+    setOrganizations(data.organizations);
+    setHobby(data.hobby);
+    setDesiredMajor(data.desiredMajor);
+
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("User not authenticated");
-      }
+      if (!user) throw new Error("User not authenticated");
 
-      // Save biodata to profiles table
-      const profileData = {
+      // 1. Upsert profile with additional fields
+      const profileData: any = {
         id: user.id,
         email: user.email,
         name: biodataForm.name,
         date_of_birth: biodataForm.dateOfBirth,
         gender: biodataForm.gender,
         user_type: userType,
+        hobby: data.hobby,
+        desired_major: data.desiredMajor,
         ...(userType === "siswa" ? {
           nama_sekolah: biodataForm.namaSekolah,
           jurusan: biodataForm.jurusan,
@@ -107,18 +128,12 @@ export default function RegisterPage() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(profileData);
+      const { error: profileError } = await supabase.from('profiles').upsert(profileData);
+      if (profileError) throw profileError;
 
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        throw profileError;
-      }
-
-      // Save report data to academic_records table
-      const recordEntries = [];
-      for (const [subject, scores] of Object.entries(data)) {
+      // 2. Insert academic records
+      const recordEntries: any[] = [];
+      for (const [subject, scores] of Object.entries(reportData)) {
         for (const [semester, score] of Object.entries(scores)) {
           if (score !== undefined && score !== null) {
             recordEntries.push({
@@ -133,15 +148,47 @@ export default function RegisterPage() {
         }
       }
 
-      if (recordEntries.length > 0) {
-        const { error: recordError } = await supabase
-          .from('academic_records')
-          .insert(recordEntries);
+      if (recordEntries.length) {
+        const { error: recordError } = await supabase.from('academic_records').insert(recordEntries);
+        if (recordError) throw recordError;
+      }
 
-        if (recordError) {
-          console.error('Academic records error:', recordError);
-          throw recordError;
+      // 3. Upload achievements images (if any) and insert rows
+      if (achievements.length) {
+        const achievementRows: any[] = [];
+        for (const ach of achievements) {
+          let imageUrl: string | null = null;
+          if (ach.file) {
+            const filePath = `certifications/${user.id}/${Date.now()}_${ach.file.name}`;
+            const { error: uploadError } = await supabase.storage.from('certifications').upload(filePath, ach.file);
+            if (uploadError && uploadError.message !== 'The resource already exists') throw uploadError;
+            const { data: publicUrlData } = supabase.storage.from('certifications').getPublicUrl(filePath);
+            imageUrl = publicUrlData.publicUrl;
+          }
+          achievementRows.push({
+            user_id: user.id,
+            title: ach.title,
+            image_url: imageUrl,
+            created_at: new Date().toISOString(),
+          });
         }
+        if (achievementRows.length) {
+          const { error: achError } = await supabase.from('achievements').insert(achievementRows);
+          if (achError) console.error('Achievement insert error:', achError);
+        }
+      }
+
+      // 4. Insert organizations
+      if (data.organizations.length) {
+        const orgRows = data.organizations.map(org => ({
+          user_id: user.id,
+          name: org.name,
+          year: org.year,
+          position: org.position,
+          created_at: new Date().toISOString(),
+        }));
+        const { error: orgError } = await supabase.from('organizations').insert(orgRows);
+        if (orgError) console.error('Organization insert error:', orgError);
       }
 
       toast({
@@ -165,9 +212,9 @@ export default function RegisterPage() {
   const progressValue = (currentStep / steps.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-[calc(100vh-16rem)] w-full flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl">
-        <Card className="shadow-xl border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <Card className="shadow-xl border-0 bg-white/80 dark:bg-black/70 backdrop-blur-sm">
           <CardHeader className="text-center space-y-4">
             <CardTitle className="text-2xl font-bold">
               Registrasi PortofolioSiswa
@@ -222,9 +269,28 @@ export default function RegisterPage() {
               <ReportStep
                 userType={userType!}
                 biodataForm={biodataForm}
-                onSubmit={handleReportSubmit}
+                onSubmit={handleReportNext}
                 onBack={() => setCurrentStep(3)}
-                isLoading={isLoading}
+                isLoading={false}
+              />
+            )}
+            
+            {currentStep === 5 && (
+              <AchievementStep
+                achievements={achievements}
+                onSubmit={handleAchievementNext}
+                onSkip={() => setCurrentStep(6)}
+                onBack={() => setCurrentStep(4)}
+              />
+            )}
+            
+            {currentStep === 6 && (
+              <OrganizationStep
+                organizations={organizations}
+                hobby={hobby}
+                desiredMajor={desiredMajor}
+                onSubmit={handleOrganizationSubmit}
+                onBack={() => setCurrentStep(5)}
               />
             )}
           </CardContent>

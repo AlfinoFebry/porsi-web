@@ -32,7 +32,7 @@ export default async function Login(props: {
         <h1 className="text-2xl font-bold">Sign in</h1>
         <p className="text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <Link className="text-primary font-medium hover:underline" href="/sign-up">
+          <Link className="text-primary font-medium hover:underline" href="/register">
             Sign up
           </Link>
         </p>
