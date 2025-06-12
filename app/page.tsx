@@ -1,5 +1,5 @@
 import Hero from "@/components/hero";
-import { CheckCircle, Medal, PieChart, Users } from "lucide-react";
+import { CheckCircle, Medal, PieChart, Users, GraduationCap } from "lucide-react";
 import { ReactNode } from "react";
 
 export default function Home() {
@@ -9,7 +9,7 @@ export default function Home() {
       
       <section id="features" className="py-20 container">
         <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Why PortofolioSiswa?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Porsi?</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             A modern platform for students and teachers to track academic progress with ease.
           </p>
@@ -32,9 +32,9 @@ export default function Home() {
             description="Record and showcase academic and extracurricular accomplishments."
           />
           <FeatureCard 
-            icon={<Users className="h-8 w-8 text-purple-500" />}
-            title="Multi-User Access"
-            description="Different access levels for students, teachers, and administrators."
+            icon={<GraduationCap className="h-8 w-8 text-purple-500" />}
+            title="College Major Recommendation"
+            description="Recommend college majors based on your academic records and achievements."
           />
           <FeatureCard 
             icon={<Users className="h-8 w-8 text-indigo-500" />}

@@ -1,157 +1,326 @@
 "use client";
 
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-
-const formSchema = z.object({
-  subject: z.string().min(1, { message: "Subject is required" }),
-  score: z.coerce.number().min(0).max(100),
-  semester: z.string().min(1, { message: "Semester is required" }),
-  schoolYear: z.string().min(1, { message: "School year is required" }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { AchievementItem } from "@/components/registration/achievement-step";
+import { OrganizationItem } from "@/components/registration/organization-step";
+import { ReportStep } from "@/components/registration/report-step";
+import { ReportData } from "@/app/(auth-pages)/register/page";
+import { BiodataForm, UserType } from "@/app/(auth-pages)/register/page";
 
 export default function InsertDataPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    reset,
-    formState: { errors } 
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      subject: "",
-      score: 0,
-      semester: "",
-      schoolYear: "",
-    },
-  });
+  const supabase = createClient();
 
-  const onSubmit = async (data: FormValues) => {
+  // category selection
+  const [category, setCategory] = useState<"academic" | "achievement" | "organization">("academic");
+  const [academicMode, setAcademicMode] = useState<"bulk" | "single">("bulk");
+
+  // profile data for academic bulk input
+  const [profile, setProfile] = useState<BiodataForm | null>(null);
+  const [userType, setUserType] = useState<UserType | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [nextSemester, setNextSemester] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoadingProfile(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("User not authenticated");
+        const { data: profileRow, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        if (profileError) throw profileError;
+        if (!profileRow) throw new Error("Profile not found");
+        setProfile({
+          name: profileRow.name,
+          dateOfBirth: profileRow.date_of_birth,
+          gender: profileRow.gender,
+          namaSekolah: profileRow.nama_sekolah,
+          jurusan: profileRow.jurusan,
+          class: profileRow.class,
+          namaPerguruanTinggi: profileRow.nama_perguruan_tinggi,
+          tahunLulusSMA: profileRow.tahun_lulus_sma,
+          tahunMasukKuliah: profileRow.tahun_masuk_kuliah,
+          jurusanKuliah: profileRow.jurusan_kuliah,
+        });
+        setUserType(profileRow.user_type as UserType);
+
+        // determine next semester
+        const { data: semRows, error: semErr } = await supabase
+          .from("academic_records")
+          .select("semester")
+          .eq("user_id", user.id)
+          .order("semester", { ascending: false })
+          .limit(1);
+        if (!semErr) {
+          const currentMax = semRows && semRows.length ? semRows[0].semester : 0;
+          setNextSemester(Math.min(6, currentMax + 1));
+        }
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // individual academic form state
+  const [subject, setSubject] = useState("");
+  const [score, setScore] = useState("");
+  const [semester, setSemester] = useState<string>("");
+
+  const handleSingleAcademicSubmit = async () => {
     setIsSubmitting(true);
-    setSubmitSuccess(false);
-    
+    setMessage(null);
     try {
-      // In a real app, this would send data to Supabase
-      console.log("Form data:", data);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      reset();
-      setSubmitSuccess(true);
-    } catch (error) {
-      console.error("Error submitting form:", error);
+      const scoreNum = parseFloat(score);
+      if (!subject || isNaN(scoreNum) || !semester) {
+        setMessage("Lengkapi data dengan benar");
+        return;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error: insertError } = await supabase.from("academic_records").insert({
+        user_id: user.id,
+        subject,
+        semester: parseInt(semester),
+        score: scoreNum,
+        school_year: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
+      });
+      if (insertError) {
+        if (insertError.message.includes("duplicate key value")) {
+          setMessage("Nilai untuk mata pelajaran & semester ini sudah ada.");
+        } else {
+          throw insertError;
+        }
+      } else {
+        setMessage("Data nilai berhasil ditambahkan");
+        setSubject("");
+        setScore("");
+      }
+    } catch (e: any) {
+      setMessage(e.message || "Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // achievement form
+  const [achievement, setAchievement] = useState<AchievementItem>({ title: "", file: null });
+  const handleAchievementSubmit = async () => {
+    setIsSubmitting(true);
+    setMessage(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      let imageUrl: string | null = null;
+      if (achievement.file) {
+        const filePath = `certifications/${user.id}/${Date.now()}_${achievement.file.name}`;
+        const { error: upError } = await supabase.storage.from("certifications").upload(filePath, achievement.file);
+        if (upError && upError.message !== "The resource already exists") throw upError;
+        const { data: publicData } = supabase.storage.from("certifications").getPublicUrl(filePath);
+        imageUrl = publicData.publicUrl;
+      }
+      const { error: achError } = await supabase.from("achievements").insert({
+        user_id: user.id,
+        title: achievement.title,
+        image_url: imageUrl,
+      });
+      if (achError) throw achError;
+      setAchievement({ title: "", file: null });
+      setMessage("Prestasi berhasil disimpan");
+    } catch (e: any) {
+      setMessage(e.message || "Terjadi kesalahan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // organization form
+  const [org, setOrg] = useState<OrganizationItem>({ name: "", year: "", position: "" });
+  const handleOrgSubmit = async () => {
+    setIsSubmitting(true);
+    setMessage(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { error: orgError } = await supabase.from("organizations").insert({
+        user_id: user.id,
+        name: org.name,
+        year: org.year,
+        position: org.position,
+      });
+      if (orgError) throw orgError;
+      setOrg({ name: "", year: "", position: "" });
+      setMessage("Data organisasi ditambahkan");
+    } catch (e: any) {
+      setMessage(e.message || "Terjadi kesalahan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // JSX for forms
+  const renderAcademicForm = () => {
+    if (academicMode === "bulk") {
+      if (loadingProfile) return <p>Memuat data...</p>;
+      if (error) return <p className="text-red-500">{error}</p>;
+      if (!profile || !userType) return null;
+      return (
+        nextSemester ? (
+          <ReportStep
+            userType={userType}
+            biodataForm={profile}
+            allowedSemesters={[nextSemester]}
+            onSubmit={(data: ReportData) => {
+              // Use existing reportStep insertion logic: just call API directly similar to registration
+              handleBulkInsert(data);
+            }}
+            onBack={() => {}}
+            isLoading={isSubmitting}
+          />
+        ) : <p>Memuat semester...</p>
+      );
+    }
+    return (
+      <div className="space-y-4 max-w-md">
+        <div className="space-y-2">
+          <Label>Nama Mata Pelajaran</Label>
+          <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Matematika" />
+        </div>
+        <div className="space-y-2">
+          <Label>Nilai</Label>
+          <Input type="number" min="0" max="100" value={score} onChange={(e) => setScore(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Semester</Label>
+          <Select value={semester} onValueChange={(v) => setSemester(v)}>
+            <SelectTrigger><SelectValue placeholder="Pilih Semester" /></SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 6 }, (_, i) => i + 1).map((s) => (
+                <SelectItem key={s} value={`${s}`}>Semester {s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {message && <p className="text-sm text-muted-foreground">{message}</p>}
+        <Button onClick={handleSingleAcademicSubmit} disabled={isSubmitting} className="w-full">
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tambah Nilai"}
+        </Button>
+      </div>
+    );
+  };
+
+  const handleBulkInsert = async (data: ReportData) => {
+    setIsSubmitting(true);
+    setMessage(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const rows: any[] = [];
+      for (const [subject, scores] of Object.entries(data as ReportData)) {
+        for (const [sem, score] of Object.entries(scores)) {
+          if (score !== undefined && score !== null) {
+            rows.push({
+              user_id: user.id,
+              subject,
+              semester: parseInt(sem.replace("semester", "")),
+              score,
+              school_year: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
+            });
+          }
+        }
+      }
+      if (rows.length) {
+        const { error: insertErr } = await supabase.from("academic_records").insert(rows);
+        if (insertErr) {
+          if (insertErr.message.includes("duplicate key value")) {
+            setMessage("Beberapa nilai sudah ada, input dibatalkan.");
+          } else throw insertErr;
+        } else {
+          setMessage("Nilai berhasil ditambahkan");
+        }
+      }
+    } catch (e: any) {
+      setMessage(e.message || "Terjadi kesalahan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderAchievementForm = () => (
+    <div className="space-y-4 max-w-md">
+      <div className="space-y-2">
+        <Label>Nama Prestasi/Sertifikat</Label>
+        <Input value={achievement.title} onChange={(e) => setAchievement({ ...achievement, title: e.target.value })} placeholder="Juara 1 ..." />
+      </div>
+      <div className="space-y-2">
+        <Label>File Gambar (Opsional)</Label>
+        <Input type="file" accept="image/*" onChange={(e) => setAchievement({ ...achievement, file: e.target.files?.[0] || null })} />
+      </div>
+      {message && <p className="text-sm text-muted-foreground">{message}</p>}
+      <Button onClick={handleAchievementSubmit} disabled={isSubmitting} className="w-full">
+        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tambah Prestasi"}
+      </Button>
+    </div>
+  );
+
+  const renderOrgForm = () => (
+    <div className="space-y-4 max-w-md">
+      <div className="space-y-2">
+        <Label>Nama Organisasi</Label>
+        <Input value={org.name} onChange={(e) => setOrg({ ...org, name: e.target.value })} placeholder="OSIS" />
+      </div>
+      <div className="space-y-2">
+        <Label>Tahun</Label>
+        <Input value={org.year} onChange={(e) => setOrg({ ...org, year: e.target.value })} placeholder="2023" />
+      </div>
+      <div className="space-y-2">
+        <Label>Posisi</Label>
+        <Input value={org.position} onChange={(e) => setOrg({ ...org, position: e.target.value })} placeholder="Ketua" />
+      </div>
+      {message && <p className="text-sm text-muted-foreground">{message}</p>}
+      <Button onClick={handleOrgSubmit} disabled={isSubmitting} className="w-full">
+        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tambah Organisasi"}
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Insert Academic Record</h1>
-        <p className="text-muted-foreground mt-2">
-          Add a new academic record to your portfolio.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">Tambah Data</h1>
+        <p className="text-muted-foreground mt-2">Pilih jenis data yang ingin ditambahkan ke portofolio Anda.</p>
       </div>
 
-      <div className="border rounded-lg p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="subject" className="text-sm font-medium">
-              Subject
-            </label>
-            <input
-              {...register("subject")}
-              id="subject"
-              className="w-full p-2 rounded-md border border-input bg-background"
-              placeholder="e.g. Mathematics"
-            />
-            {errors.subject && (
-              <p className="text-sm text-red-500">{errors.subject.message}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="score" className="text-sm font-medium">
-              Score (0-100)
-            </label>
-            <input
-              {...register("score")}
-              id="score"
-              type="number"
-              min="0"
-              max="100"
-              className="w-full p-2 rounded-md border border-input bg-background"
-            />
-            {errors.score && (
-              <p className="text-sm text-red-500">{errors.score.message}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="semester" className="text-sm font-medium">
-              Semester
-            </label>
-            <select
-              {...register("semester")}
-              id="semester"
-              className="w-full p-2 rounded-md border border-input bg-background"
-            >
-              <option value="">Select semester</option>
-              <option value="1">Semester 1</option>
-              <option value="2">Semester 2</option>
-            </select>
-            {errors.semester && (
-              <p className="text-sm text-red-500">{errors.semester.message}</p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="schoolYear" className="text-sm font-medium">
-              School Year
-            </label>
-            <input
-              {...register("schoolYear")}
-              id="schoolYear"
-              className="w-full p-2 rounded-md border border-input bg-background"
-              placeholder="e.g. 2023/2024"
-            />
-            {errors.schoolYear && (
-              <p className="text-sm text-red-500">{errors.schoolYear.message}</p>
-            )}
-          </div>
-          
-          <div className="pt-4">
-            <button
-              type="submit"
-              className="bg-primary text-primary-foreground py-2 px-4 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none w-full flex items-center justify-center"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : "Submit Record"}
-            </button>
-          </div>
-          
-          {submitSuccess && (
-            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-green-600 dark:text-green-400 text-sm mt-4">
-              Academic record submitted successfully!
-            </div>
-          )}
-        </form>
+      {/* Category selection */}
+      <div className="flex space-x-2">
+        <Button variant={category === "academic" ? "default" : "outline"} onClick={() => setCategory("academic")}>Nilai Akademik</Button>
+        <Button variant={category === "achievement" ? "default" : "outline"} onClick={() => setCategory("achievement")}>Prestasi</Button>
+        <Button variant={category === "organization" ? "default" : "outline"} onClick={() => setCategory("organization")}>Organisasi</Button>
       </div>
+
+      {/* Academic mode switch */}
+      {category === "academic" && (
+        <div className="flex space-x-2">
+          <Button variant={academicMode === "bulk" ? "default" : "outline"} onClick={() => setAcademicMode("bulk")}>Input Semester Baru</Button>
+          <Button variant={academicMode === "single" ? "default" : "outline"} onClick={() => setAcademicMode("single")}>Input Per Mapel</Button>
+        </div>
+      )}
+
+      {/* Render form */}
+      {category === "academic" && renderAcademicForm()}
+      {category === "achievement" && renderAchievementForm()}
+      {category === "organization" && renderOrgForm()}
     </div>
   );
 } 

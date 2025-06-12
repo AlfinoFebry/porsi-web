@@ -44,7 +44,7 @@ export default function LandingNav() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-bold text-xl">
-            PortofolioSiswa
+            Porsi
           </Link>
           <div className="hidden md:flex gap-6">
             <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

@@ -7,7 +7,7 @@ export default function Hero() {
       <div className="flex flex-col gap-6 items-center text-center">
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-            PortofolioSiswa
+            Portofolio Digital Siswa
           </span>
         </h1>
         <p className="text-2xl md:text-3xl !leading-tight max-w-2xl text-center text-muted-foreground">
@@ -21,25 +21,23 @@ export default function Hero() {
           >
             Get Started <MoveRight className="h-4 w-4" />
           </Link>
-          <Link 
+          {/* <Link 
             href="#learn-more" 
             className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-6 py-3 rounded-md font-medium transition-colors"
           >
             Learn More
-          </Link>
+          </Link> */}
         </div>
       </div>
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
       
       <div className="text-center">
-        <p className="text-sm text-muted-foreground mb-6">Trusted by students and teachers at</p>
+        <p className="text-sm text-muted-foreground mb-6">Can be used by</p>
         <div className="flex flex-wrap justify-center gap-8 opacity-70">
-          <div className="text-xl font-semibold">SMA 1</div>
-          <div className="text-xl font-semibold">SMA 2</div>
-          <div className="text-xl font-semibold">SMA 3</div>
-          <div className="text-xl font-semibold">SMK 1</div>
-          <div className="text-xl font-semibold">SMK 2</div>
+          <div className="text-xl font-semibold">Junior High School</div>
+          <div className="text-xl font-semibold">Senior High School</div>
+          <div className="text-xl font-semibold">Vocational High School</div>
         </div>
       </div>
     </div>

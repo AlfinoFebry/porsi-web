@@ -15,6 +15,7 @@ interface ReportStepProps {
   onSubmit: (data: ReportData) => void;
   onBack: () => void;
   isLoading: boolean;
+  allowedSemesters?: number[]; // optional list of semesters to display
 }
 
 // Subject lists based on curriculum
@@ -43,7 +44,7 @@ const IPS_SUBJECTS = [
   "Ekonomi",
 ];
 
-export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading }: ReportStepProps) {
+export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading, allowedSemesters }: ReportStepProps) {
   const [reportData, setReportData] = useState<ReportData>({});
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [additionalSubjects, setAdditionalSubjects] = useState<string[]>([]);
@@ -94,6 +95,10 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading 
   const availableSubjects = getAvailableSubjects();
   const otherSubjects = getOtherSubjects();
   const semesterCount = getSemesterCount();
+
+  const semestersArray = allowedSemesters && allowedSemesters.length > 0
+    ? allowedSemesters
+    : Array.from({ length: semesterCount }, (_, i) => i + 1);
 
   // Initialize subjects if not done
   useState(() => {
@@ -201,7 +206,9 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading 
         <div>
           <h2 className="text-xl font-semibold">Input Nilai Rapor</h2>
           <p className="text-sm text-muted-foreground">
-            Masukkan nilai rapor untuk semester 1{semesterCount > 1 ? `-${semesterCount}` : ""}
+            {allowedSemesters && allowedSemesters.length === 1
+              ? `Masukkan nilai rapor untuk semester ${allowedSemesters[0]}`
+              : `Masukkan nilai rapor untuk semester 1${semesterCount > 1 ? `-${semesterCount}` : ""}`}
           </p>
         </div>
       </div>
@@ -295,7 +302,7 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading 
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {Array.from({ length: semesterCount }, (_, i) => i + 1).map((semester) => (
+                  {semestersArray.map((semester) => (
                     <div key={semester} className="space-y-2">
                       <Label htmlFor={`${subject}-sem${semester}`} className="text-sm">
                         Semester {semester}
