@@ -268,213 +268,205 @@ export default function PortfolioPage() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        {/* Profile Section */}
-        <div className="md:col-span-1">
-          <div className="border rounded-lg p-6 space-y-6">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Profil Siswa</h2>
-              <p className="text-muted-foreground text-sm">Informasi akademik Anda</p>
+      {/* Overview Card */}
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">Overview</h2>
+        </div>
+        <div className="space-y-4 border rounded-lg p-6 md:flex md:items-center md:gap-8">
+          
+          {/* Circle diagram for average score */}
+          <div className="flex justify-center pt-4">
+            <div className="relative h-48 w-48 flex items-center justify-center">
+              <svg className="h-full w-full" viewBox="0 0 100 100">
+                <circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="10" 
+                  strokeOpacity="0.1" 
+                />
+                <circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="10" 
+                  className="text-blue-500"
+                  strokeDasharray={`${avgScore * 2.51} 251`} 
+                  strokeDashoffset="62.75" 
+                  transform="rotate(-90 50 50)" 
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold">{avgScore}</span>
+                <span className="text-xs text-muted-foreground">Rata-rata</span>
+              </div>
             </div>
-            
-            <div className="space-y-4">
-              <div>
-                <p className="font-medium">{displayInfo.name}</p>
-                <p className="text-sm text-muted-foreground">{displayInfo.subtitle}</p>
-                <p className="text-xs text-muted-foreground capitalize mt-1">
-                  {userData.user_type === "siswa" ? "Siswa SMA" : "Alumni"}
-                </p>
-              </div>
-              
-              {/* Circle diagram for average score */}
-              <div className="flex justify-center pt-4">
-                <div className="relative h-48 w-48 flex items-center justify-center">
-                  <svg className="h-full w-full" viewBox="0 0 100 100">
-                    <circle 
-                      cx="50" 
-                      cy="50" 
-                      r="40" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="10" 
-                      strokeOpacity="0.1" 
-                    />
-                    <circle 
-                      cx="50" 
-                      cy="50" 
-                      r="40" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="10" 
-                      className="text-blue-500"
-                      strokeDasharray={`${avgScore * 2.51} 251`} 
-                      strokeDashoffset="62.75" 
-                      transform="rotate(-90 50 50)" 
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold">{avgScore}</span>
-                    <span className="text-xs text-muted-foreground">Rata-rata</span>
-                  </div>
-                </div>
-              </div>
+          </div>
 
-              <div className="pt-4 space-y-2">
-                <div className="text-sm flex justify-between">
-                  <span>Total Mata Pelajaran</span>
-                  <span className="font-medium">{academicRecords.length}</span>
-                </div>
-                <div className="text-sm flex justify-between">
-                  <span>Jurusan</span>
-                  <span className="font-medium">
-                    {userData.user_type === "siswa" 
-                      ? (userData.jurusan || "-") 
-                      : (userData.jurusan_kuliah || "-")
-                    }
-                  </span>
-                </div>
-                {userData.user_type === "siswa" && userData.class && (
-                  <div className="text-sm flex justify-between">
-                    <span>Kelas</span>
-                    <span className="font-medium">{userData.class}</span>
-                  </div>
-                )}
+          <div>
+            <p className="font-medium">{displayInfo.name}</p>
+            <p className="text-sm text-muted-foreground">{displayInfo.subtitle}</p>
+            <p className="text-xs text-muted-foreground capitalize mt-1">
+              {userData.user_type === "siswa" ? "Siswa SMA" : "Alumni"}
+            </p>
+          </div>
+          <div className="pt-4 space-y-2">
+            <div className="text-sm flex justify-between">
+              <span>Total Mata Pelajaran</span>
+              <span className="font-medium">{academicRecords.length}</span>
+            </div>
+            <div className="text-sm flex justify-between">
+              <span>Jurusan</span>
+              <span className="font-medium">
+                {userData.user_type === "siswa" 
+                  ? (userData.jurusan || "-") 
+                  : (userData.jurusan_kuliah || "-")
+                }
+              </span>
+            </div>
+            {userData.user_type === "siswa" && userData.class && (
+              <div className="text-sm flex justify-between">
+                <span>Kelas</span>
+                <span className="font-medium">{userData.class}</span>
               </div>
+            )}
+          </div>
 
-              {/* Hobby & Desired Major */}
-              {(userData.hobby || userData.desired_major) && (
-                <div className="pt-2 space-y-2 border-t">
-                  {userData.hobby && (
-                    <div className="text-sm flex justify-between">
-                      <span>Hobi</span>
-                      <span className="font-medium">{userData.hobby}</span>
-                    </div>
-                  )}
-                  {userData.desired_major && (
-                    <div className="text-sm flex justify-between">
-                      <span>Target Jurusan</span>
-                      <span className="font-medium">{userData.desired_major}</span>
-                    </div>
-                  )}
+          {/* Hobby & Desired Major */}
+          {(userData.hobby || userData.desired_major) && (
+            <div className="pt-2 space-y-2">
+              {userData.hobby && (
+                <div className="text-sm flex justify-between">
+                  <span>Hobi</span>
+                  <span className="font-medium">{userData.hobby}</span>
+                </div>
+              )}
+              {userData.desired_major && (
+                <div className="text-sm flex justify-between">
+                  <span>Target Jurusan</span>
+                  <span className="font-medium">{userData.desired_major}</span>
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* Academic Records Section */}
-        <div className="md:col-span-2">
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Catatan Akademik</h2>
-              <p className="text-muted-foreground text-sm">Tahun Ajaran {schoolYear}</p>
+      {/* Academic Records Section */}
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">Catatan Akademik</h2>
+          <p className="text-muted-foreground text-sm">Tahun Ajaran {schoolYear}</p>
+        </div>
+        
+        {academicRecords.length === 0 ? (
+          <div className="border rounded-lg p-6">
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Belum ada catatan akademik.</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Catatan akan muncul setelah Anda menyelesaikan registrasi.
+              </p>
             </div>
-            
-            {academicRecords.length === 0 ? (
-              <div className="border rounded-lg p-6">
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Belum ada catatan akademik.</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Catatan akan muncul setelah Anda menyelesaikan registrasi.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {groupRecordsBySemester().map(({ semester, records }) => {
-                  const semesterAvg = calculateSemesterAverage(records);
-                  return (
-                    <div key={semester} className="border rounded-lg p-6 space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-medium">Semester {semester}</h3>
-                        <div className="text-sm text-muted-foreground">
-                          Rata-rata: <span className="font-medium text-foreground">{semesterAvg}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-3 px-2 font-medium text-sm">Mata Pelajaran</th>
-                              <th className="text-center py-3 px-2 font-medium text-sm">Nilai</th>
-                              <th className="text-center py-3 px-2 font-medium text-sm">Grade</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {records.map((record) => (
-                              <tr key={record.id} className="border-b hover:bg-muted/50">
-                                <td className="py-3 px-2">{record.subject}</td>
-                                <td className="py-3 px-2 text-center font-medium">{record.score}</td>
-                                <td className="py-3 px-2 text-center">
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    getGradeFromScore(record.score) === 'A' 
-                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
-                                      : getGradeFromScore(record.score).startsWith('B') 
-                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                                  }`}>
-                                    {getGradeFromScore(record.score)}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* Achievements & Organizations Section */}
-        {(achievements.length > 0 || organizations.length > 0) && (
-          <div className="md:col-span-3 space-y-8">
-            {achievements.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-xl font-semibold flex items-center gap-2">Prestasi/Sertifikat</h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {achievements.map((ach) => (
-                    <div key={ach.id} className="border rounded-lg p-4 space-y-2">
-                      {ach.image_url ? (
-                        <img src={ach.image_url} alt={ach.title} className="w-full h-32 object-cover rounded" />
-                      ) : (
-                        <div className="w-full h-32 flex items-center justify-center bg-muted rounded">
-                          <span className="text-sm text-muted-foreground">No Image</span>
-                        </div>
-                      )}
-                      <p className="font-medium text-sm truncate" title={ach.title}>{ach.title}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(ach.created_at).toLocaleDateString()}</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-6">
+            {groupRecordsBySemester().map(({ semester, records }) => {
+              const semesterAvg = calculateSemesterAverage(records);
+              return (
+                <div key={semester} className="border rounded-lg p-6 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium">Semester {semester}</h3>
+                    <div className="text-sm text-muted-foreground">
+                      Rata-rata: <span className="font-medium text-foreground">{semesterAvg}</span>
                     </div>
-                  ))}
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-2 font-medium text-sm">Mata Pelajaran</th>
+                          <th className="text-center py-3 px-2 font-medium text-sm">Nilai</th>
+                          <th className="text-center py-3 px-2 font-medium text-sm">Grade</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {records.map((record) => (
+                          <tr key={record.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-2">{record.subject}</td>
+                            <td className="py-3 px-2 text-center font-medium">{record.score}</td>
+                            <td className="py-3 px-2 text-center">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                getGradeFromScore(record.score) === 'A' 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                                  : getGradeFromScore(record.score).startsWith('B') 
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                              }`}>
+                                {getGradeFromScore(record.score)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {organizations.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-xl font-semibold">Organisasi</h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {organizations.map((org) => (
-                    <div key={org.id} className="border rounded-lg p-4 space-y-1">
-                      <p className="font-medium text-sm">{org.name}</p>
-                      {org.position && (
-                        <p className="text-xs text-muted-foreground">Posisi: {org.position}</p>
-                      )}
-                      {org.year && (
-                        <p className="text-xs text-muted-foreground">Tahun: {org.year}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Achievements & Organizations Section */}
+      {(achievements.length > 0 || organizations.length > 0) && (
+        <div className="md:col-span-3 space-y-8">
+          {achievements.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-xl font-semibold flex items-center gap-2">Prestasi/Sertifikat</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {achievements.map((ach) => (
+                  <div key={ach.id} className="border rounded-lg p-4 space-y-2">
+                    {ach.image_url ? (
+                      <img src={ach.image_url} alt={ach.title} className="w-full h-32 object-cover rounded" />
+                    ) : (
+                      <div className="w-full h-32 flex items-center justify-center bg-muted rounded">
+                        <span className="text-sm text-muted-foreground">No Image</span>
+                      </div>
+                    )}
+                    <p className="font-medium text-sm truncate" title={ach.title}>{ach.title}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(ach.created_at).toLocaleDateString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {organizations.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-xl font-semibold">Organisasi</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {organizations.map((org) => (
+                  <div key={org.id} className="border rounded-lg p-4 space-y-1">
+                    <p className="font-medium text-sm">{org.name}</p>
+                    {org.position && (
+                      <p className="text-xs text-muted-foreground">Posisi: {org.position}</p>
+                    )}
+                    {org.year && (
+                      <p className="text-xs text-muted-foreground">Tahun: {org.year}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 } 
