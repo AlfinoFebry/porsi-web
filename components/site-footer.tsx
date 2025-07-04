@@ -18,18 +18,28 @@ export default function SiteFooter() {
             PortofolioSiswa
           </Link>
           <p className="mt-2 text-sm text-muted-foreground max-w-md">
-            A modern platform for tracking and managing student academic records.
+            Platform modern untuk menyimpan data akademik siswa.
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-12">
+        {/* <div className="grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-12">
           <div className="space-y-3">
             <div className="text-sm font-medium">Platform</div>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link>
+                <Link
+                  href="#"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Features
+                </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
+                <Link
+                  href="#"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  About
+                </Link>
               </li>
             </ul>
           </div>
@@ -37,15 +47,25 @@ export default function SiteFooter() {
             <div className="text-sm font-medium">Legal</div>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+                <Link
+                  href="#"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Privacy
+                </Link>
               </li>
               <li>
-                <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
+                <Link
+                  href="#"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Terms
+                </Link>
               </li>
             </ul>
           </div>
-        </div>
+        </div> */}
       </div>
     </footer>
   );
-} 
+}

@@ -16,9 +16,11 @@ export default function LandingNav() {
       setAuthChecked(true); // <- auth check done
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSignedIn(!!session);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSignedIn(!!session);
+      }
+    );
 
     return () => {
       listener?.subscription.unsubscribe();
@@ -36,7 +38,7 @@ export default function LandingNav() {
 
   const navClass = [
     "sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-    signedIn ? "md:hidden" : ""
+    signedIn ? "md:hidden" : "",
   ].join(" ");
 
   return (
@@ -47,10 +49,16 @@ export default function LandingNav() {
             Porsi
           </Link>
           <div className="hidden md:flex gap-6">
-            <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="#features"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Features
             </Link>
-            <Link href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="#about"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               About
             </Link>
           </div>
@@ -59,17 +67,17 @@ export default function LandingNav() {
           <ThemeSwitcher />
           {!signedIn && (
             <div className="hidden sm:flex gap-2">
-              <Link 
-                href="/sign-in" 
+              <Link
+                href="/sign-in"
                 className="px-4 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-medium transition-colors"
               >
-                Sign In
+                Login
               </Link>
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors"
               >
-                Register
+                Daftar
               </Link>
             </div>
           )}
