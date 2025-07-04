@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { UserType } from "@/app/(auth-pages)/register/page";
+import { UserType } from "@/lib/types";
 import { GraduationCap, School } from "lucide-react";
 
 interface UserTypeStepProps {

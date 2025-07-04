@@ -10,8 +10,7 @@ import { Loader2 } from "lucide-react";
 import { AchievementItem } from "@/components/registration/achievement-step";
 import { OrganizationItem } from "@/components/registration/organization-step";
 import { ReportStep } from "@/components/registration/report-step";
-import { ReportData } from "@/app/(auth-pages)/register/page";
-import { BiodataForm, UserType } from "@/app/(auth-pages)/register/page";
+import { ReportData, BiodataForm, UserType } from "@/lib/types";
 
 export default function InsertDataPage() {
   const supabase = createClient();

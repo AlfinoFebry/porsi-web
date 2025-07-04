@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  UserCog
 } from "lucide-react";
 import { ThemeSwitcher } from "./theme-switcher";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,11 @@ export function DashboardNav() {
       href: "/dashboard/portfolio",
       label: "Portfolio",
       icon: <BarChart3 className="h-5 w-5" />
+    },
+    {
+      href: "/dashboard/inisialisasi-data",
+      label: "Inisialisasi Data",
+      icon: <UserCog className="h-5 w-5" />
     },
     {
       href: "/dashboard/insert-data",

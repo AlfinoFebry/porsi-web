@@ -1,28 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { UserType, Jurusan, BiodataForm } from "@/app/(auth-pages)/register/page";
+import { UserType, Jurusan, BiodataForm } from "@/lib/types";
 import { ArrowLeft } from "lucide-react";
 
 interface BiodataStepProps {
   userType: UserType;
   onSubmit: (data: BiodataForm) => void;
   onBack: () => void;
+  initialData?: BiodataForm;
 }
 
-export function BiodataStep({ userType, onSubmit, onBack }: BiodataStepProps) {
-  const [formData, setFormData] = useState<BiodataForm>({
-    name: "",
-    dateOfBirth: "",
-    gender: "male",
-  });
+export function BiodataStep({ userType, onSubmit, onBack, initialData }: BiodataStepProps) {
+  const [formData, setFormData] = useState<BiodataForm>(
+    initialData ?? {
+      name: "",
+      dateOfBirth: "",
+      gender: "male",
+    }
+  );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Sync with initialData when it changes (e.g., when navigating back)
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};

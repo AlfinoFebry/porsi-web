@@ -3,14 +3,30 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
+        const file = formData.get('file') as File;
+
+        if (!file) {
+            return NextResponse.json(
+                { error: 'No file provided in the request' },
+                { status: 400 }
+            );
+        }
+
+        console.log('OCR API: Processing file:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+        });
+
+        // Create new FormData to ensure proper formatting
+        const apiFormData = new FormData();
+        apiFormData.append('file', file);
 
         // Forward the request to the OCR API
-        const response = await fetch('https://api.porsi.me', {
+        const response = await fetch('https://api2.porsi.me/ocr', {
             method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json',
-            },
+            body: apiFormData,
+            // Don't set Content-Type - let it be set automatically with boundary
         });
 
         if (!response.ok) {

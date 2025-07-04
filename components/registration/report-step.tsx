@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserType, Jurusan, BiodataForm, ReportData } from "@/app/(auth-pages)/register/page";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserType, Jurusan, BiodataForm, ReportData } from "@/lib/types";
 import { ArrowLeft, Upload, Loader2, Camera } from "lucide-react";
 
 interface ReportStepProps {
@@ -16,6 +17,7 @@ interface ReportStepProps {
   onBack: () => void;
   isLoading: boolean;
   allowedSemesters?: number[]; // optional list of semesters to display
+  initialData?: ReportData;
 }
 
 // Subject lists based on curriculum
@@ -44,13 +46,39 @@ const IPS_SUBJECTS = [
   "Ekonomi",
 ];
 
-export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading, allowedSemesters }: ReportStepProps) {
-  const [reportData, setReportData] = useState<ReportData>({});
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading, allowedSemesters, initialData }: ReportStepProps) {
+  const [reportData, setReportData] = useState<ReportData>(initialData ?? {});
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      return Object.keys(initialData);
+    }
+    return [];
+  });
   const [additionalSubjects, setAdditionalSubjects] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<string>("");
+  const [selectedOcrSemester, setSelectedOcrSemester] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      setReportData(initialData);
+      setSelectedSubjects(Object.keys(initialData));
+    }
+  }, [initialData]);
+
+  // Initialize subjects if no previous data
+  useEffect(() => {
+    if (selectedSubjects.length === 0) {
+      setSelectedSubjects(availableSubjects);
+      const initData: ReportData = {};
+      availableSubjects.forEach(subject => {
+        initData[subject] = {};
+      });
+      setReportData(initData);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Determine available subjects based on user's jurusan
   const getAvailableSubjects = () => {
@@ -100,19 +128,6 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading,
     ? allowedSemesters
     : Array.from({ length: semesterCount }, (_, i) => i + 1);
 
-  // Initialize subjects if not done
-  useState(() => {
-    if (selectedSubjects.length === 0) {
-      setSelectedSubjects(availableSubjects);
-      // Initialize report data for required subjects
-      const initialData: ReportData = {};
-      availableSubjects.forEach(subject => {
-        initialData[subject] = {};
-      });
-      setReportData(initialData);
-    }
-  });
-
   const handleSubjectToggle = (subject: string, isChecked: boolean) => {
     if (isChecked) {
       setSelectedSubjects(prev => [...prev, subject]);
@@ -144,36 +159,133 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading,
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!selectedOcrSemester) {
+      setUploadResult("Pilih semester terlebih dahulu sebelum upload foto rapor.");
+      return;
+    }
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      setUploadResult("File harus berupa gambar (JPG, PNG, dll).");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      setUploadResult("Ukuran file maksimal 10MB.");
+      return;
+    }
+
     setIsUploading(true);
-    setUploadResult("");
+    setUploadResult("Sedang memproses gambar... Mohon tunggu 1-5 menit.");
 
     try {
+      // Create FormData with 'file' field as expected by the API
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('file', file);
 
-      const response = await fetch('/api/ocr', {
+      // Create a timeout promise (6 minutes to be safe)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout after 6 minutes')), 6 * 60 * 1000)
+      );
+
+      // Make the request using internal API route to avoid CORS issues
+      const fetchPromise = fetch('/api/ocr', {
         method: 'POST',
         body: formData,
+        // Don't set Content-Type header - let browser set it with proper boundary
       });
 
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+
       if (!response.ok) {
-        throw new Error(`OCR API request failed: ${response.status}`);
+        let errorMessage = `API Error: ${response.status}`;
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            errorMessage += ` - ${errorText}`;
+          }
+        } catch (e) {
+          // Ignore error when reading response body
+        }
+        
+        if (response.status === 422) {
+          throw new Error(`Format file tidak didukung atau ada masalah dengan gambar. Pastikan gambar jelas dan berisi teks rapor. (${response.status})`);
+        } else if (response.status === 413) {
+          throw new Error("File terlalu besar. Kompres gambar dan coba lagi.");
+        } else {
+          throw new Error(errorMessage);
+        }
       }
 
       const result = await response.json();
-      setUploadResult(result.text || "Tidak ada teks yang ditemukan dalam gambar.");
       
-      // Here you could implement logic to parse the OCR text and auto-fill scores
-      // For now, we just show the text result
+      if (result.Nilai) {
+        // Map API response to our subject names and auto-fill scores
+        const subjectMapping: Record<string, string> = {
+          "Pendidikan_Agama": "Pendidikan Agama dan Budi Pekerti",
+          "Pkn": "PPKn (Pendidikan Pancasila dan Kewarganegaraan)",
+          "Bahasa_Indonesia": "Bahasa Indonesia",
+          "Matematika_Wajib": "Matematika Wajib",
+          "Sejarah_Indonesia": "Sejarah Indonesia",
+          "Bahasa_Inggris": "Bahasa Inggris",
+          "Seni_Budaya": "Prakarya/Seni Budaya",
+          "Penjaskes": "PJOK (Pendidikan Jasmani, Olahraga, dan Kesehatan)",
+          "PKWu": "Prakarya/Seni Budaya",
+          "Mulok": "Muatan Lokal Bahasa Daerah",
+          "Matematika_Peminatan": "Matematika Peminatan",
+          "Biologi": "Biologi",
+          "Fisika": "Fisika",
+          "Kimia": "Kimia",
+          "Lintas_Minat": "Lintas Minat",
+          "Geografi": "Geografi",
+          "Sejarah_Minat": "Sejarah",
+          "Sosiologi": "Sosiologi",
+          "Ekonomi": "Ekonomi"
+        };
+
+        const newReportData = { ...reportData };
+        
+        Object.entries(result.Nilai).forEach(([apiSubject, score]) => {
+          const mappedSubject = subjectMapping[apiSubject];
+          if (mappedSubject && score !== -1 && selectedSubjects.includes(mappedSubject)) {
+            if (!newReportData[mappedSubject]) {
+              newReportData[mappedSubject] = {};
+            }
+            newReportData[mappedSubject][`semester${selectedOcrSemester}` as keyof typeof newReportData[string]] = score as number;
+          }
+        });
+
+        setReportData(newReportData);
+        setUploadResult(`Berhasil mengisi nilai untuk semester ${selectedOcrSemester} dari hasil OCR. Jurusan terdeteksi: ${result.Jurusan}, Kelas: ${result.Kelas}`);
+      } else {
+        setUploadResult(result["Raw Text"] || "Tidak ada nilai yang ditemukan dalam gambar.");
+      }
       
     } catch (error: any) {
       console.error('OCR Error:', error);
-      if (error.message && error.message.includes('CORS')) {
-        setUploadResult("Fitur OCR sementara tidak tersedia karena masalah CORS. Silakan masukkan nilai secara manual.");
+      console.log('File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      if (error.message && error.message.includes('timeout')) {
+        setUploadResult("⏰ Proses OCR membutuhkan waktu terlalu lama (>6 menit). Coba lagi dengan gambar yang lebih kecil atau masukkan nilai secara manual.");
       } else if (error.message && error.message.includes('Failed to fetch')) {
-        setUploadResult("Tidak dapat mengakses layanan OCR. Pastikan koneksi internet stabil dan coba lagi.");
+        setUploadResult(`🌐 Tidak dapat terhubung ke API OCR. Kemungkinan penyebab:
+        • Koneksi internet bermasalah
+        • API sedang maintenance
+        • Browser memblokir request (coba disable ad blocker)
+        
+        Silakan coba lagi atau masukkan nilai secara manual.`);
+      } else if (error.message && error.message.includes('CORS')) {
+        setUploadResult("❌ Masalah CORS dengan API OCR. Silakan masukkan nilai secara manual.");
+      } else if (error.message && error.message.includes('NetworkError')) {
+        setUploadResult("🌐 Masalah jaringan. Periksa koneksi internet Anda dan coba lagi.");
+      } else if (error.name === 'TypeError') {
+        setUploadResult("🌐 Error koneksi ke API. Pastikan Anda terhubung ke internet dan coba lagi.");
       } else {
-        setUploadResult("Terjadi kesalahan saat memproses gambar. Silakan coba lagi atau masukkan nilai secara manual.");
+        setUploadResult(`❌ Terjadi kesalahan: ${error.message || 'Unknown error'}. Silakan coba lagi atau masukkan nilai secara manual.`);
       }
     } finally {
       setIsUploading(false);
@@ -225,19 +337,48 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading,
           <p className="text-sm text-muted-foreground">
             Upload foto rapor untuk mengisi nilai secara otomatis menggunakan OCR
           </p>
+          <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+            <p className="font-medium mb-1">💡 Tips untuk hasil OCR terbaik:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Pastikan foto jelas dan tidak buram</li>
+              <li>Cahaya cukup terang, hindari bayangan</li>
+              <li>Teks terlihat dengan jelas</li>
+              <li>Format JPG, PNG, atau WEBP</li>
+              <li>Ukuran maksimal 10MB</li>
+            </ul>
+          </div>
           
           <div className="flex flex-col space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="ocr-semester">Pilih Semester untuk OCR</Label>
+              <Select
+                value={selectedOcrSemester?.toString() || ""}
+                onValueChange={(value) => setSelectedOcrSemester(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  {semestersArray.map((semester) => (
+                    <SelectItem key={semester} value={semester.toString()}>
+                      Semester {semester}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
               type="button"
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isUploading || !selectedOcrSemester}
               className="w-full"
             >
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Memproses...
+                  Memproses OCR...
                 </>
               ) : (
                 <>
@@ -246,6 +387,17 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading,
                 </>
               )}
             </Button>
+            
+            {isUploading && (
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md">
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                  🔄 Sedang memproses gambar dengan OCR
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Proses ini membutuhkan waktu 1-5 menit. Mohon tidak menutup halaman.
+                </p>
+              </div>
+            )}
             
             <input
               ref={fileInputRef}
