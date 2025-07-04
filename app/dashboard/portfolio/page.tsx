@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface UserProfile {
   id: string;
@@ -63,6 +64,8 @@ export default function PortfolioPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<string | null>(null);
+  const [recLoading, setRecLoading] = useState(false);
 
   const supabase = createClient();
 
@@ -144,6 +147,19 @@ export default function PortfolioPage() {
         setOrganizations(orgs || []);
       }
 
+      /* ──────────────────────── fetch stored recommendation ─────────────────────── */
+      const { data: recRow, error: recError } = await supabase
+        .from("recommendations")
+        .select("prediction")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (recError && recError.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Recommendation fetch error:', recError);
+      } else {
+        setRecommendation(recRow?.prediction ?? null);
+      }
+      /* ────────────────────────────────────────────────────────────────────────── */
     } catch (error: any) {
       console.error('Fetch error:', error);
       setError(error.message);
@@ -207,6 +223,103 @@ export default function PortfolioPage() {
     }
   };
 
+  /* ─────────────────────── helper to build CART payload ─────────────────────── */
+  const buildCartPayload = () => {
+    // List of subjects CART expects
+    const subjects = [
+      "Pendidikan_Agama","Pkn","Bahasa_Indonesia","Matematika_Wajib",
+      "Sejarah_Indonesia","Bahasa_Inggris","Seni_Budaya","Penjaskes",
+      "PKWu","Mulok","Matematika_Peminatan","Biologi","Fisika","Kimia",
+      "Lintas_Minat","Geografi","Sejarah_Minat","Sosiologi","Ekonomi",
+    ];
+
+    // Average score for every subject found
+    const avg: Record<string, number> = {};
+    subjects.forEach((s) => {
+      const records = academicRecords.filter(r => r.subject.replaceAll(" ","_") === s);
+      if (records.length) {
+        avg[s] = Math.round(
+          records.reduce((t,r)=>t+r.score,0) / records.length
+        );
+      }
+    });
+
+    // Fill missing subjects with -1
+    subjects.forEach((s)=>{ if(avg[s]===undefined) avg[s] = -1 });
+
+    // Apply jurusan rules
+    if (userData?.jurusan === "IPA") {
+      avg["Geografi"] = avg["Sejarah_Minat"] = avg["Ekonomi"] = -1;
+    } else if (userData?.jurusan === "IPS") {
+      avg["Matematika_Peminatan"] = avg["Fisika"] = avg["Biologi"] = avg["Kimia"] = -1;
+    }
+
+    return {
+      JK: userData?.gender === "male" ? "L" : "P",
+      Jurusan_SMA: userData?.jurusan ?? "-",
+      ...avg,
+      Hobi: userData?.hobby ?? "-",
+    };
+  };
+  /* ───────────────────────────────────────────────────────────────────────────── */
+
+  /* ───────────── get / refresh recommendation handlers ───────────── */
+  const getRecommendation = async () => {
+    try {
+      setRecLoading(true);
+      const payload = buildCartPayload();
+      
+      console.log('Sending payload:', payload); // Debug log
+      
+      const res = await fetch("https://api2.porsi.me/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`API Error: ${res.status} - ${errorText}`);
+      }
+      
+      const data = await res.json();
+      console.log('API Response:', data); // Debug log
+      
+      if (!data.prediction) {
+        throw new Error("No prediction received from API");
+      }
+
+      // Persist to DB with better error handling
+      const { error: dbError } = await supabase
+        .from("recommendations")
+        .upsert({ 
+          user_id: userData!.id, 
+          prediction: data.prediction,
+          updated_at: new Date().toISOString()
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+
+      setRecommendation(data.prediction);
+      toast.success("Rekomendasi berhasil dibuat");
+    } catch (e: any) {
+      console.error('Recommendation error:', e);
+      toast.error(e.message ?? "Terjadi kesalahan");
+    } finally {
+      setRecLoading(false);
+    }
+  };
+
+  const refreshRecommendation = () => {
+    if (window.confirm("Ambil ulang rekomendasi? Hasil lama akan di-overwrite")) {
+      getRecommendation();
+    }
+  };
+  /* ───────────────────────────────────────────────────────────────── */
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -268,92 +381,140 @@ export default function PortfolioPage() {
         </p>
       </div>
 
-      {/* Overview Card */}
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold">Overview</h2>
-        </div>
-        <div className="space-y-4 border rounded-lg p-6 md:flex md:items-center md:gap-8">
-          
-          {/* Circle diagram for average score */}
-          <div className="flex justify-center pt-4">
-            <div className="relative h-48 w-48 flex items-center justify-center">
-              <svg className="h-full w-full" viewBox="0 0 100 100">
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="10" 
-                  strokeOpacity="0.1" 
-                />
-                <circle 
-                  cx="50" 
-                  cy="50" 
-                  r="40" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="10" 
-                  className="text-blue-500"
-                  strokeDasharray={`${avgScore * 2.51} 251`} 
-                  strokeDashoffset="62.75" 
-                  transform="rotate(-90 50 50)" 
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold">{avgScore}</span>
-                <span className="text-xs text-muted-foreground">Rata-rata</span>
+      {/* Overview + Recommendation side-by-side */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* ───────── Overview Card ───────── */}
+        <div className="space-y-6 flex flex-col h-full">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Overview</h2>
+          </div>
+          <div className="space-y-4 border rounded-lg p-6 md:flex md:items-center md:gap-8 flex-1">
+            
+            {/* Circle diagram for average score */}
+            <div className="flex justify-center pt-4">
+              <div className="relative h-48 w-48 flex items-center justify-center">
+                <svg className="h-full w-full" viewBox="0 0 100 100">
+                  <circle 
+                    cx="50" 
+                    cy="50" 
+                    r="40" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="10" 
+                    strokeOpacity="0.1" 
+                  />
+                  <circle 
+                    cx="50" 
+                    cy="50" 
+                    r="40" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="10" 
+                    className="text-blue-500"
+                    strokeDasharray={`${avgScore * 2.51} 251`} 
+                    strokeDashoffset="62.75" 
+                    transform="rotate(-90 50 50)" 
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold">{avgScore}</span>
+                  <span className="text-xs text-muted-foreground">Rata-rata</span>
+                </div>
               </div>
             </div>
+
+            <div>
+              <p className="font-medium">{displayInfo.name}</p>
+              <p className="text-sm text-muted-foreground">{displayInfo.subtitle}</p>
+              <p className="text-xs text-muted-foreground capitalize mt-1">
+                {userData.user_type === "siswa" ? "Siswa SMA" : "Alumni"}
+              </p>
+            </div>
+            <div className="pt-4 space-y-2">
+              <div className="text-sm flex justify-between">
+                <span>Total Mata Pelajaran</span>
+                <span className="font-medium">{academicRecords.length}</span>
+              </div>
+              <div className="text-sm flex justify-between">
+                <span>Jurusan</span>
+                <span className="font-medium">
+                  {userData.user_type === "siswa" 
+                    ? (userData.jurusan || "-") 
+                    : (userData.jurusan_kuliah || "-")
+                  }
+                </span>
+              </div>
+              {userData.user_type === "siswa" && userData.class && (
+                <div className="text-sm flex justify-between">
+                  <span>Kelas</span>
+                  <span className="font-medium">{userData.class}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Hobby & Desired Major */}
+            {/* {(userData.hobby || userData.desired_major) && (
+              <div className="pt-2 space-y-2">
+                {userData.hobby && (
+                  <div className="text-sm flex justify-between">
+                    <span>Hobi</span>
+                    <span className="font-medium">{userData.hobby}</span>
+                  </div>
+                )}
+                {userData.desired_major && (
+                  <div className="text-sm flex justify-between">
+                    <span>Target Jurusan</span>
+                    <span className="font-medium">{userData.desired_major}</span>
+                  </div>
+                )}
+              </div>
+            )} */}
+          </div>
+        </div>
+
+        {/* ───────── NEW  Recommendation Card ───────── */}
+        <div className="space-y-6 flex flex-col h-full">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Rekomendasi</h2>
           </div>
 
-          <div>
-            <p className="font-medium">{displayInfo.name}</p>
-            <p className="text-sm text-muted-foreground">{displayInfo.subtitle}</p>
-            <p className="text-xs text-muted-foreground capitalize mt-1">
-              {userData.user_type === "siswa" ? "Siswa SMA" : "Alumni"}
-            </p>
-          </div>
-          <div className="pt-4 space-y-2">
-            <div className="text-sm flex justify-between">
-              <span>Total Mata Pelajaran</span>
-              <span className="font-medium">{academicRecords.length}</span>
-            </div>
-            <div className="text-sm flex justify-between">
-              <span>Jurusan</span>
-              <span className="font-medium">
-                {userData.user_type === "siswa" 
-                  ? (userData.jurusan || "-") 
-                  : (userData.jurusan_kuliah || "-")
-                }
-              </span>
-            </div>
-            {userData.user_type === "siswa" && userData.class && (
-              <div className="text-sm flex justify-between">
-                <span>Kelas</span>
-                <span className="font-medium">{userData.class}</span>
-              </div>
+          <div className="border rounded-lg p-6 flex flex-col items-center justify-center text-center space-y-4 flex-1">
+            {recLoading ? (
+              <>
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="text-sm text-muted-foreground">
+                  Memproses rekomendasi…
+                </p>
+              </>
+            ) : recommendation ? (
+              <>
+                <p className="text-3xl font-bold">{recommendation}</p>
+                {userData?.desired_major && (
+                  <p className="text-sm text-muted-foreground">
+                    Minat Anda di <span className="font-medium">{userData.desired_major}</span>
+                  </p>
+                )}
+                <button
+                  onClick={refreshRecommendation}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+                >
+                  Refresh Rekomendasi
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Belum ada rekomendasi untuk Anda.
+                </p>
+                <button
+                  onClick={getRecommendation}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+                >
+                  Dapatkan Rekomendasi
+                </button>
+              </>
             )}
           </div>
-
-          {/* Hobby & Desired Major */}
-          {(userData.hobby || userData.desired_major) && (
-            <div className="pt-2 space-y-2">
-              {userData.hobby && (
-                <div className="text-sm flex justify-between">
-                  <span>Hobi</span>
-                  <span className="font-medium">{userData.hobby}</span>
-                </div>
-              )}
-              {userData.desired_major && (
-                <div className="text-sm flex justify-between">
-                  <span>Target Jurusan</span>
-                  <span className="font-medium">{userData.desired_major}</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
