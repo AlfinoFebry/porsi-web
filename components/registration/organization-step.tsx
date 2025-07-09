@@ -17,17 +17,31 @@ export interface OrganizationItem {
 interface OrganizationStepProps {
   organizations: OrganizationItem[];
   hobby: string;
-  desiredMajor: string;
-  onSubmit: (data: { organizations: OrganizationItem[]; hobby: string; desiredMajor: string; }) => void;
+  desiredMajor: string; // expected as comma-separated list when coming from parent
+  onSubmit: (data: {
+    organizations: OrganizationItem[];
+    hobby: string;
+    desiredMajor: string; // we will join two selections with comma
+  }) => void;
   onBack: () => void;
 }
 
-export function OrganizationStep({ organizations: initialOrgs, hobby: initialHobby, desiredMajor: initialMajor, onSubmit, onBack }: OrganizationStepProps) {
+export function OrganizationStep({
+  organizations: initialOrgs,
+  hobby: initialHobby,
+  desiredMajor: initialMajor,
+  onSubmit,
+  onBack,
+}: OrganizationStepProps) {
   const [organizations, setOrganizations] = useState<OrganizationItem[]>(initialOrgs.length ? initialOrgs : [{ name: "", year: "", position: "" }]);
   const [hobby, setHobby] = useState<string>(initialHobby || "");
-  const [desiredMajor, setDesiredMajor] = useState<string>(initialMajor || "");
+  // Split initial majors by comma to prefill when navigating back
+  const initialMajors = initialMajor ? initialMajor.split(/\s*,\s*/) : ["", ""];
+  const [desiredMajor1, setDesiredMajor1] = useState<string>(initialMajors[0] || "");
+  const [desiredMajor2, setDesiredMajor2] = useState<string>(initialMajors[1] || "");
   const [customHobby, setCustomHobby] = useState<string>("");
-  const [customMajor, setCustomMajor] = useState<string>("");
+  const [customMajor1, setCustomMajor1] = useState<string>("");
+  const [customMajor2, setCustomMajor2] = useState<string>("");
 
   const handleAddOrg = () => {
     setOrganizations(prev => [...prev, { name: "", year: "", position: "" }]);
@@ -43,14 +57,172 @@ export function OrganizationStep({ organizations: initialOrgs, hobby: initialHob
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanedOrgs = organizations.filter(o => o.name.trim() !== "");
+    const cleanedOrgs = organizations.filter((o) => o.name.trim() !== "");
+
     const finalHobby = hobby === "other" ? customHobby : hobby;
-    const finalMajor = desiredMajor === "other" ? customMajor : desiredMajor;
-    onSubmit({ organizations: cleanedOrgs, hobby: finalHobby, desiredMajor: finalMajor });
+
+    const processedMajor1 =
+      desiredMajor1 === "other" ? customMajor1 : desiredMajor1;
+    const processedMajor2 =
+      desiredMajor2 === "other" ? customMajor2 : desiredMajor2;
+
+    const majors = [processedMajor1, processedMajor2]
+      .filter((m) => m && m.trim() !== "")
+      .join(", ");
+
+    onSubmit({ organizations: cleanedOrgs, hobby: finalHobby, desiredMajor: majors });
   };
 
-  const hobbyOptions = ["Olahraga", "Membaca", "Musik", "Coding", "Traveling", "other"];
-  const majorOptions = ["Teknik Informatika", "Kedokteran", "Ekonomi", "Psikologi", "Hukum", "other"];
+  // Options derived from CSV files (manually inlined for now)
+  const hobbyOptions = [
+    "Pemrograman",
+    "Bermain Game",
+    "Robotika",
+    "Elektronika",
+    "Berjualan",
+    "Menulis",
+    "Organisasi",
+    "Membaca",
+    "Debat",
+    "Volunteer",
+    "Belajar Bahasa",
+    "Menggambar",
+    "Desain Grafis",
+    "Fotografi",
+    "Mengedit Video",
+    "Bermain Musik",
+    "Mengajar",
+    "Public Speaking",
+    "Belajar",
+    "Olahraga",
+    "Berkebun",
+    "Mendaki gunung",
+    "Memasak",
+    "Memecahkan Puzzle Logika",
+    "Catur",
+    "Astronomi",
+    "Kerajinan Tangan",
+    "Kepanitiaan",
+    "Jalan-jalan",
+    "other",
+  ];
+
+  const majorOptions = [
+    "Administrasi Bisnis",
+    "Administrasi Negara",
+    "Administrasi Pendidikan",
+    "Agribisnis",
+    "Agroekoteknologi",
+    "Agroteknologi",
+    "Akuntansi",
+    "Akuntansi Manajemen",
+    "Akuntansi Perpajakan",
+    "Akuakultur",
+    "Arsitektur",
+    "Bahasa Inggris Untuk Industri Pariwisata",
+    "Bahasa Inggris Untuk Komunikasi dan Bisnis",
+    "Bimbingan Konseling",
+    "Biologi",
+    "Budidaya Perairan",
+    "Desain Grafis",
+    "Desain Komunikasi Visual",
+    "Ekonomi Pembangunan",
+    "Farmasi",
+    "Fisika",
+    "Fotografi",
+    "Geografi",
+    "Hubungan Internasional",
+    "HUKUM EKONOMI SYARIAH ( MUAMALAH)",
+    "Ilmu Hukum",
+    "Ilmu Keolahragaan",
+    "Ilmu Keperawatan",
+    "Ilmu Kesejahteraan Sosial",
+    "Ilmu Komunikasi",
+    "Ilmu Perpustakaan dan Ilmu Informasi",
+    "Ilmu Politik",
+    "Ilmu Sejarah",
+    "Kebidanan",
+    "Kehutanan",
+    "Keperawatan",
+    "Kesejahteraan Sosial",
+    "Keuangan",
+    "Kimia",
+    "Lab Medis",
+    "Manajemen",
+    "Manajemen Agribisnis",
+    "Manajemen Informatika",
+    "Manajemen Informasi Kesehatan",
+    "Manajemen Pemasaran",
+    "Manajemen Perhotelan",
+    "Manajemen Rekayasa Konstruksi",
+    "Manajemen Sumber Daya Perairan",
+    "Matematika",
+    "PG Paud",
+    "PGSD",
+    "Pendidikan Agama Islam",
+    "Pendidikan Akuntansi",
+    "Pendidikan Administrasi Perkantoran",
+    "Pendidikan Bahasa dan Sastra Indonesia",
+    "Pendidikan Bahasa Daerah",
+    "Pendidikan Bahasa Inggris",
+    "Pendidikan Biologi",
+    "Pendidikan Ekonomi",
+    "Pendidikan Fisika",
+    "Pendidikan Geografi",
+    "Pendidikan IPA",
+    "Pendidikan IPS",
+    "Pendidikan Jasmani dan Olahraga",
+    "Pendidikan Jasmani Kesehatan dan Rekreasi",
+    "Pendidikan Keagamaan Budha",
+    "Pendidikan Kepelatihan Olahraga",
+    "Pendidikan Kimia",
+    "Pendidikan Luar Sekolah",
+    "Pendidikan Matematika",
+    "Pendidikan Pancasila dan Kewarganegaraan",
+    "Pendidikan Sejarah",
+    "Pendidikan Seni Tari dan Musik",
+    "Pendidikan Sosiologi",
+    "Pendidikan Tata Busana",
+    "Pendidikan Tata Niaga",
+    "Pendidikan Teknik Informatika",
+    "Pendidikan Teknologi Informasi",
+    "Pendidikan Dokter",
+    "Pendidikan Dokter Hewan",
+    "Pengelolaan Arsip dan Rekaman Informasi",
+    "Pengelolaan Perhotelan",
+    "Perpajakan",
+    "Peternakan",
+    "Psikologi",
+    "Rekam Medis",
+    "Rekam Medis dan Informasi Kesehatan",
+    "Seni Rupa Murni",
+    "Sistem Informasi Bisnis",
+    "Sosiologi",
+    "Statistika Bisnis",
+    "Tata Boga",
+    "Teknologi Bioproses",
+    "Teknologi Kimia Industri",
+    "Teknologi Pendidikan",
+    "Teknologi Pertambangan",
+    "Teknologi Rekayasa Pembangkit Energi",
+    "Teknik Elektromedik",
+    "Teknik Elektro",
+    "Teknik Geofisika",
+    "Teknik Industri",
+    "Teknik Informatika",
+    "Teknik Jaringan Komunikasi Digital",
+    "Teknik Kimia Industri",
+    "Teknik Komputer",
+    "Teknik Listrik",
+    "Teknik Mesin",
+    "Teknik Perkapalan",
+    "Teknik Pertambangan",
+    "Teknik Sipil",
+    "Teknik Telekomunikasi",
+    "Teknik Fisika",
+    "Usaha Perjalanan Wisata",
+    "other",
+  ];
 
   return (
     <div className="space-y-6">
@@ -119,25 +291,59 @@ export function OrganizationStep({ organizations: initialOrgs, hobby: initialHob
           </CardContent>
         </Card>
 
-        {/* Desired Major Selection */}
+        {/* Desired Major Selection (up to 2) */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Jurusan Kuliah Impian</CardTitle>
+            <CardTitle className="text-base">Jurusan Kuliah Impian (Maks. 2)</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Select value={desiredMajor} onValueChange={val => setDesiredMajor(val)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih jurusan" />
-              </SelectTrigger>
-              <SelectContent>
-                {majorOptions.map(opt => (
-                  <SelectItem key={opt} value={opt}>{opt === "other" ? "Lainnya" : opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {desiredMajor === "other" && (
-              <Input value={customMajor} onChange={e => setCustomMajor(e.target.value)} placeholder="Tuliskan jurusan impian Anda" />
-            )}
+          <CardContent className="space-y-6">
+            {/* First Major */}
+            <div className="space-y-2">
+              <Label>Jurusan Utama</Label>
+              <Select value={desiredMajor1} onValueChange={(val) => setDesiredMajor1(val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jurusan utama" />
+                </SelectTrigger>
+                <SelectContent>
+                  {majorOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt === "other" ? "Lainnya" : opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {desiredMajor1 === "other" && (
+                <Input
+                  value={customMajor1}
+                  onChange={(e) => setCustomMajor1(e.target.value)}
+                  placeholder="Tuliskan jurusan utama"
+                />
+              )}
+            </div>
+
+            {/* Second Major (optional) */}
+            <div className="space-y-2">
+              <Label>Jurusan Kedua (Opsional)</Label>
+              <Select value={desiredMajor2} onValueChange={(val) => setDesiredMajor2(val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jurusan kedua (opsional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {majorOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt === "other" ? "Lainnya" : opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {desiredMajor2 === "other" && (
+                <Input
+                  value={customMajor2}
+                  onChange={(e) => setCustomMajor2(e.target.value)}
+                  placeholder="Tuliskan jurusan kedua"
+                />
+              )}
+            </div>
           </CardContent>
         </Card>
 
