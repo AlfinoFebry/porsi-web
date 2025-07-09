@@ -22,24 +22,31 @@ export default function Dashboard() {
   useEffect(() => {
     const checkUserData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         // Check if user has completed their profile
         const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('id, name, user_type')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("id, name, user_type")
+          .eq("id", user.id)
           .single();
 
-        if (error || !profileData || !profileData.name || !profileData.user_type) {
+        if (
+          error ||
+          !profileData ||
+          !profileData.name ||
+          !profileData.user_type
+        ) {
           setIsDataComplete(false);
         } else {
           setProfile(profileData);
           setIsDataComplete(true);
         }
       } catch (error) {
-        console.error('Error checking user data:', error);
+        console.error("Error checking user data:", error);
         setIsDataComplete(false);
       } finally {
         setIsLoading(false);
@@ -64,9 +71,9 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-2">
+        {/* <p className="text-muted-foreground mt-2">
           Welcome to your student portfolio dashboard.
-        </p>
+        </p> */}
       </div>
 
       {/* Data Completion Notification */}
@@ -80,7 +87,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-orange-700 dark:text-orange-300">
-              Anda belum melengkapi data pribadi dan akademik. Lengkapi data Anda untuk mendapatkan pengalaman portofolio yang maksimal.
+              Anda belum melengkapi data pribadi dan akademik. Lengkapi data
+              Anda untuk mendapatkan pengalaman portofolio yang maksimal.
             </p>
             <Link href="/dashboard/inisialisasi-data">
               <Button className="bg-orange-600 hover:bg-orange-700 text-white">
@@ -103,7 +111,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-green-700 dark:text-green-300">
-              Data Anda sudah lengkap. Anda dapat mulai mengelola portofolio akademik Anda.
+              Data Anda sudah lengkap. Anda dapat mulai mengelola portofolio
+              akademik Anda.
             </p>
           </CardContent>
         </Card>
@@ -160,4 +169,4 @@ export default function Dashboard() {
       </div> */}
     </div>
   );
-} 
+}
