@@ -375,8 +375,32 @@ export default function PortfolioPage() {
 
   /* ─────────────────────── helper to build CART payload ─────────────────────── */
   const buildCartPayload = () => {
-    // List of subjects CART expects
-    const subjects = [
+    // Mapping from DB subject names (as saved in data_akademik) ➔ API keys
+    const subjectMap: Record<string, string> = {
+      "Pendidikan Agama dan Budi Pekerti": "Pendidikan_Agama",
+      "PPKn (Pendidikan Pancasila dan Kewarganegaraan)": "Pkn",
+      "Bahasa Indonesia": "Bahasa_Indonesia",
+      "Matematika Wajib": "Matematika_Wajib",
+      "Sejarah Indonesia": "Sejarah_Indonesia",
+      "Bahasa Inggris": "Bahasa_Inggris",
+      "Seni Budaya": "Seni_Budaya",
+      "PKWu": "PKWu",
+      "PJOK (Pendidikan Jasmani, Olahraga, dan Kesehatan)": "Penjaskes",
+      "Muatan Lokal Bahasa Daerah": "Mulok",
+      // PKWu di-back-map ke Prakarya/Seni Budaya sehingga pakai key sama
+      "Matematika Peminatan": "Matematika_Peminatan",
+      "Biologi": "Biologi",
+      "Fisika": "Fisika",
+      "Kimia": "Kimia",
+      "Lintas Minat": "Lintas_Minat",
+      "Geografi": "Geografi",
+      "Sejarah": "Sejarah_Minat",
+      "Sosiologi": "Sosiologi",
+      "Ekonomi": "Ekonomi",
+    };
+
+    // Prepare list of API keys CART expects (retain ordering for readability)
+    const apiSubjects = [
       "Pendidikan_Agama",
       "Pkn",
       "Bahasa_Indonesia",
@@ -384,8 +408,8 @@ export default function PortfolioPage() {
       "Sejarah_Indonesia",
       "Bahasa_Inggris",
       "Seni_Budaya",
-      "Penjaskes",
       "PKWu",
+      "Penjaskes",
       "Mulok",
       "Matematika_Peminatan",
       "Biologi",
@@ -398,37 +422,75 @@ export default function PortfolioPage() {
       "Ekonomi",
     ];
 
-    // Average score for every subject found
     const avg: Record<string, number> = {};
-    subjects.forEach((s) => {
-      const records = academicRecords.filter(
-        (r) => r.subject.replaceAll(" ", "_") === s
+
+    // Calculate average per API subject key using mapping
+    apiSubjects.forEach((apiKey) => {
+      // find corresponding DB subject(s)
+      const dbSubjects = Object.entries(subjectMap)
+        .filter(([, key]) => key === apiKey)
+        .map(([db]) => db);
+
+      const relatedRecords = academicRecords.filter((r) =>
+        dbSubjects.includes(r.subject)
       );
-      if (records.length) {
-        avg[s] = Math.round(
-          records.reduce((t, r) => t + r.score, 0) / records.length
+
+      if (relatedRecords.length) {
+        avg[apiKey] = Math.round(
+          relatedRecords.reduce((sum, rec) => sum + rec.score, 0) /
+            relatedRecords.length
         );
       }
     });
 
-    // Fill missing subjects with -1
-    subjects.forEach((s) => {
-      if (avg[s] === undefined) avg[s] = -1;
+    // Fill missing with -1
+    apiSubjects.forEach((k) => {
+      if (avg[k] === undefined) avg[k] = -1;
     });
 
-    // Apply jurusan rules
+    // Handle cross-major (Lintas Minat) aggregation and exclusions
     if (userData?.jurusan === "IPA") {
-      avg["Geografi"] =
-        avg["Sejarah_Minat"] =
-        avg["Sposiologi"] =
-        avg["Ekonomi"] =
-          -1;
+      const crossKeys = [
+        "Geografi",
+        "Sejarah_Minat",
+        "Sosiologi",
+        "Ekonomi",
+      ];
+      // Calculate average of any IPS-specific subjects taken
+      const crossScores: number[] = [];
+      academicRecords.forEach((rec) => {
+        const apiKey = subjectMap[rec.subject];
+        if (crossKeys.includes(apiKey)) {
+          crossScores.push(rec.score);
+        }
+      });
+      if (crossScores.length) {
+        avg["Lintas_Minat"] = Math.round(
+          crossScores.reduce((t, s) => t + s, 0) / crossScores.length
+        );
+      }
+      // Exclude individual IPS subjects
+      crossKeys.forEach((k) => (avg[k] = -1));
     } else if (userData?.jurusan === "IPS") {
-      avg["Matematika_Peminatan"] =
-        avg["Fisika"] =
-        avg["Biologi"] =
-        avg["Kimia"] =
-          -1;
+      const crossKeys = [
+        "Matematika_Peminatan",
+        "Fisika",
+        "Biologi",
+        "Kimia",
+      ];
+      const crossScores: number[] = [];
+      academicRecords.forEach((rec) => {
+        const apiKey = subjectMap[rec.subject];
+        if (crossKeys.includes(apiKey)) {
+          crossScores.push(rec.score);
+        }
+      });
+      if (crossScores.length) {
+        avg["Lintas_Minat"] = Math.round(
+          crossScores.reduce((t, s) => t + s, 0) / crossScores.length
+        );
+      }
+      crossKeys.forEach((k) => (avg[k] = -1));
     }
 
     return {

@@ -29,7 +29,9 @@ const WAJIB_SUBJECTS = [
   "Sejarah Indonesia",
   "Bahasa Inggris",
   "PJOK (Pendidikan Jasmani, Olahraga, dan Kesehatan)",
-  "Prakarya/Seni Budaya",
+  "Seni Budaya",
+  "Muatan Lokal Bahasa Daerah",
+  "PKWu", // Prakarya dan Kewirausahaan
 ];
 
 const IPA_SUBJECTS = [
@@ -228,9 +230,9 @@ export function ReportStep({ userType, biodataForm, onSubmit, onBack, isLoading,
           "Matematika_Wajib": "Matematika Wajib",
           "Sejarah_Indonesia": "Sejarah Indonesia",
           "Bahasa_Inggris": "Bahasa Inggris",
-          "Seni_Budaya": "Prakarya/Seni Budaya",
+          "Seni_Budaya": "Seni Budaya",
+          "PKWu": "PKWu",
           "Penjaskes": "PJOK (Pendidikan Jasmani, Olahraga, dan Kesehatan)",
-          "PKWu": "Prakarya/Seni Budaya",
           "Mulok": "Muatan Lokal Bahasa Daerah",
           "Matematika_Peminatan": "Matematika Peminatan",
           "Biologi": "Biologi",
