@@ -76,16 +76,16 @@ export default function InisialisasiDataPage() {
       const profileData: any = {
         id: user.id,
         email: user.email,
-        name: biodataForm.name,
-        date_of_birth: biodataForm.dateOfBirth,
-        gender: biodataForm.gender,
-        user_type: userType,
-        hobby: data.hobby,
-        desired_major: data.desiredMajor,
+        nama: biodataForm.name,
+        tanggal_lahir: biodataForm.dateOfBirth,
+        jenis_kelamin: biodataForm.gender,
+        tipe_user: userType,
+        hobi: data.hobby,
+        jurusan_impian: data.desiredMajor,
         ...(userType === "siswa" ? {
           nama_sekolah: biodataForm.namaSekolah,
           jurusan: biodataForm.jurusan,
-          class: biodataForm.class,
+          kelas: biodataForm.class,
         } : {
           nama_perguruan_tinggi: biodataForm.namaPerguruanTinggi,
           tahun_lulus_sma: biodataForm.tahunLulusSMA,
@@ -96,7 +96,7 @@ export default function InisialisasiDataPage() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: profileError } = await supabase.from('profiles').upsert(profileData);
+      const { error: profileError } = await supabase.from('profil').upsert(profileData);
       if (profileError) throw profileError;
 
       // 2. Insert academic records
@@ -106,10 +106,10 @@ export default function InisialisasiDataPage() {
           if (score !== undefined && score !== null) {
             recordEntries.push({
               user_id: user.id,
-              subject,
+              mapel: subject,
               semester: parseInt(semester.replace('semester', '')),
-              score: parseFloat(score.toString()),
-              school_year: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
+              nilai: parseFloat(score.toString()),
+              tahun: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
               created_at: new Date().toISOString(),
             });
           }
@@ -117,7 +117,7 @@ export default function InisialisasiDataPage() {
       }
 
       if (recordEntries.length) {
-        const { error: recordError } = await supabase.from('academic_records').insert(recordEntries);
+        const { error: recordError } = await supabase.from('data_akademik').insert(recordEntries);
         if (recordError) throw recordError;
       }
 
@@ -135,13 +135,13 @@ export default function InisialisasiDataPage() {
           }
           achievementRows.push({
             user_id: user.id,
-            title: ach.title,
+            judul: ach.title,
             image_url: imageUrl,
             created_at: new Date().toISOString(),
           });
         }
         if (achievementRows.length) {
-          const { error: achError } = await supabase.from('achievements').insert(achievementRows);
+          const { error: achError } = await supabase.from('sertifikat').insert(achievementRows);
           if (achError) console.error('Achievement insert error:', achError);
         }
       }
@@ -150,12 +150,12 @@ export default function InisialisasiDataPage() {
       if (data.organizations.length) {
         const orgRows = data.organizations.map(org => ({
           user_id: user.id,
-          name: org.name,
-          year: org.year,
-          position: org.position,
+          nama: org.name,
+          tahun: org.year,
+          posisi: org.position,
           created_at: new Date().toISOString(),
         }));
-        const { error: orgError } = await supabase.from('organizations').insert(orgRows);
+        const { error: orgError } = await supabase.from('organisasi').insert(orgRows);
         if (orgError) console.error('Organization insert error:', orgError);
       }
 

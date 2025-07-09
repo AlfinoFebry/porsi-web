@@ -228,8 +228,10 @@ export default function PortfolioPage() {
 
       // Fetch user profile
       const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
+        .from("profil")
+        .select(
+          "id, name:nama, email, user_type:tipe_user, gender:jenis_kelamin, date_of_birth:tanggal_lahir, hobby:hobi, desired_major:jurusan_impian, nama_sekolah, jurusan, class:kelas, nama_perguruan_tinggi, tahun_lulus_sma, tahun_masuk_kuliah, jurusan_kuliah"
+        )
         .eq("id", user.id)
         .single();
 
@@ -248,11 +250,11 @@ export default function PortfolioPage() {
 
       // Fetch academic records
       const { data: records, error: recordsError } = await supabase
-        .from("academic_records")
-        .select("*")
+        .from("data_akademik")
+        .select("id, subject:mapel, semester, score:nilai, school_year:tahun")
         .eq("user_id", user.id)
         .order("semester", { ascending: true })
-        .order("subject", { ascending: true });
+        .order("mapel", { ascending: true });
 
       if (recordsError) {
         console.error("Academic records error:", recordsError);
@@ -264,8 +266,8 @@ export default function PortfolioPage() {
 
       // Fetch recent achievements (latest 5)
       const { data: ach, error: achError } = await supabase
-        .from("achievements")
-        .select("*")
+        .from("sertifikat")
+        .select("id, title:judul, image_url, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -276,8 +278,8 @@ export default function PortfolioPage() {
 
       // Fetch recent organizations (latest 5)
       const { data: orgs, error: orgError } = await supabase
-        .from("organizations")
-        .select("*")
+        .from("organisasi")
+        .select("id, name:nama, year:tahun, position:posisi, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -288,7 +290,7 @@ export default function PortfolioPage() {
 
       /* ──────────────────────── fetch stored recommendation ─────────────────────── */
       const { data: recRow, error: recError } = await supabase
-        .from("recommendations")
+        .from("rekomendasi")
         .select("prediction")
         .eq("user_id", user.id)
         .single();
@@ -416,7 +418,11 @@ export default function PortfolioPage() {
 
     // Apply jurusan rules
     if (userData?.jurusan === "IPA") {
-      avg["Geografi"] = avg["Sejarah_Minat"] = avg["Ekonomi"] = -1;
+      avg["Geografi"] =
+        avg["Sejarah_Minat"] =
+        avg["Sposiologi"] =
+        avg["Ekonomi"] =
+          -1;
     } else if (userData?.jurusan === "IPS") {
       avg["Matematika_Peminatan"] =
         avg["Fisika"] =
@@ -480,7 +486,7 @@ export default function PortfolioPage() {
       }
 
       // Persist to DB with better error handling
-      const { error: dbError } = await supabase.from("recommendations").upsert({
+      const { error: dbError } = await supabase.from("rekomendasi").upsert({
         user_id: userData!.id,
         prediction: data.prediction,
         updated_at: new Date().toISOString(),

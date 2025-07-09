@@ -95,8 +95,8 @@ export function DashboardNav() {
         }
 
         const { data: profileData, error } = await supabase
-          .from("profiles")
-          .select("name, user_type")
+          .from("profil")
+          .select("name:nama, user_type:tipe_user")
           .eq("id", user.id)
           .single();
 

@@ -34,7 +34,11 @@ export default function InsertDataPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("User not authenticated");
-        const { data: profileRow, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        const { data: profileRow, error: profileError } = await supabase
+          .from("profil")
+          .select("id, name:nama, date_of_birth:tanggal_lahir, gender:jenis_kelamin, user_type:tipe_user, nama_sekolah, jurusan, class:kelas, nama_perguruan_tinggi, tahun_lulus_sma, tahun_masuk_kuliah, jurusan_kuliah")
+          .eq("id", user.id)
+          .single();
         if (profileError) throw profileError;
         if (!profileRow) throw new Error("Profile not found");
         setProfile({
@@ -53,7 +57,7 @@ export default function InsertDataPage() {
 
         // determine next semester
         const { data: semRows, error: semErr } = await supabase
-          .from("academic_records")
+          .from("data_akademik")
           .select("semester")
           .eq("user_id", user.id)
           .order("semester", { ascending: false })
@@ -88,12 +92,12 @@ export default function InsertDataPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error: insertError } = await supabase.from("academic_records").insert({
+      const { error: insertError } = await supabase.from("data_akademik").insert({
         user_id: user.id,
-        subject,
+        mapel: subject,
         semester: parseInt(semester),
-        score: scoreNum,
-        school_year: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
+        nilai: scoreNum,
+        tahun: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
       });
       if (insertError) {
         if (insertError.message.includes("duplicate key value")) {
@@ -129,9 +133,9 @@ export default function InsertDataPage() {
         const { data: publicData } = supabase.storage.from("certifications").getPublicUrl(filePath);
         imageUrl = publicData.publicUrl;
       }
-      const { error: achError } = await supabase.from("achievements").insert({
+      const { error: achError } = await supabase.from("sertifikat").insert({
         user_id: user.id,
-        title: achievement.title,
+        judul: achievement.title,
         image_url: imageUrl,
       });
       if (achError) throw achError;
@@ -152,11 +156,11 @@ export default function InsertDataPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      const { error: orgError } = await supabase.from("organizations").insert({
+      const { error: orgError } = await supabase.from("organisasi").insert({
         user_id: user.id,
-        name: org.name,
-        year: org.year,
-        position: org.position,
+        nama: org.name,
+        tahun: org.year,
+        posisi: org.position,
       });
       if (orgError) throw orgError;
       setOrg({ name: "", year: "", position: "" });
@@ -231,16 +235,16 @@ export default function InsertDataPage() {
           if (score !== undefined && score !== null) {
             rows.push({
               user_id: user.id,
-              subject,
+              mapel: subject,
               semester: parseInt(sem.replace("semester", "")),
-              score,
-              school_year: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
+              nilai: score,
+              tahun: new Date().getFullYear() + "/" + (new Date().getFullYear() + 1),
             });
           }
         }
       }
       if (rows.length) {
-        const { error: insertErr } = await supabase.from("academic_records").insert(rows);
+        const { error: insertErr } = await supabase.from("data_akademik").insert(rows);
         if (insertErr) {
           if (insertErr.message.includes("duplicate key value")) {
             setMessage("Beberapa nilai sudah ada, input dibatalkan.");

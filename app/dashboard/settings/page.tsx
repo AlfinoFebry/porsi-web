@@ -37,9 +37,15 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) throw new Error("User not authenticated");
-        const { data: profile, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+        const { data: profile, error: profileError } = await supabase
+          .from("profil")
+          .select("id, name:nama, email, user_type:tipe_user, nama_sekolah, jurusan, class:kelas, nama_perguruan_tinggi, jurusan_kuliah, tahun_lulus_sma, tahun_masuk_kuliah")
+          .eq("id", user.id)
+          .single();
         if (profileError) throw profileError;
         if (!profile) throw new Error("Profile not found");
 
@@ -70,9 +76,13 @@ export default function SettingsPage() {
     fetchProfile();
   }, []);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => prev ? { ...prev, [name]: value } as FormState : prev);
+    setFormData((prev) =>
+      prev ? ({ ...prev, [name]: value } as FormState) : prev
+    );
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -83,17 +93,19 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const updateData: any = {
         id: user.id,
-        name: formData.name,
+        nama: formData.name,
         email: formData.email,
       };
       if (formData.user_type === "siswa") {
         updateData.nama_sekolah = formData.nama_sekolah;
         updateData.jurusan = formData.jurusan;
-        updateData.class = formData.class;
+        updateData.kelas = formData.class;
       } else {
         updateData.nama_perguruan_tinggi = formData.nama_perguruan_tinggi;
         updateData.jurusan_kuliah = formData.jurusan_kuliah;
@@ -101,7 +113,9 @@ export default function SettingsPage() {
         updateData.tahun_masuk_kuliah = formData.tahun_masuk_kuliah;
       }
 
-      const { error: upError } = await supabase.from("profiles").upsert(updateData);
+      const { error: upError } = await supabase
+        .from("profil")
+        .upsert(updateData);
       if (upError) throw upError;
       setSuccess(true);
     } catch (e: any) {
@@ -164,20 +178,47 @@ export default function SettingsPage() {
                 {formData.user_type === "siswa" ? (
                   <>
                     <div className="space-y-2">
-                      <label htmlFor="nama_sekolah" className="text-sm font-medium">Nama Sekolah</label>
-                      <input id="nama_sekolah" name="nama_sekolah" value={formData.nama_sekolah} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background" />
+                      <label
+                        htmlFor="nama_sekolah"
+                        className="text-sm font-medium"
+                      >
+                        Nama Sekolah
+                      </label>
+                      <input
+                        id="nama_sekolah"
+                        name="nama_sekolah"
+                        value={formData.nama_sekolah}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="jurusan" className="text-sm font-medium">Jurusan</label>
-                      <select id="jurusan" name="jurusan" value={formData.jurusan} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background">
+                      <label htmlFor="jurusan" className="text-sm font-medium">
+                        Jurusan
+                      </label>
+                      <select
+                        id="jurusan"
+                        name="jurusan"
+                        value={formData.jurusan}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      >
                         <option value="">Pilih jurusan</option>
                         <option value="IPA">IPA</option>
                         <option value="IPS">IPS</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="class" className="text-sm font-medium">Kelas</label>
-                      <select id="class" name="class" value={formData.class} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background">
+                      <label htmlFor="class" className="text-sm font-medium">
+                        Kelas
+                      </label>
+                      <select
+                        id="class"
+                        name="class"
+                        value={formData.class}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      >
                         <option value="">Pilih kelas</option>
                         <option value="10">10</option>
                         <option value="11">11</option>
@@ -188,26 +229,74 @@ export default function SettingsPage() {
                 ) : (
                   <>
                     <div className="space-y-2">
-                      <label htmlFor="nama_perguruan_tinggi" className="text-sm font-medium">Perguruan Tinggi</label>
-                      <input id="nama_perguruan_tinggi" name="nama_perguruan_tinggi" value={formData.nama_perguruan_tinggi} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background" />
+                      <label
+                        htmlFor="nama_perguruan_tinggi"
+                        className="text-sm font-medium"
+                      >
+                        Perguruan Tinggi
+                      </label>
+                      <input
+                        id="nama_perguruan_tinggi"
+                        name="nama_perguruan_tinggi"
+                        value={formData.nama_perguruan_tinggi}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="jurusan_kuliah" className="text-sm font-medium">Jurusan Kuliah</label>
-                      <input id="jurusan_kuliah" name="jurusan_kuliah" value={formData.jurusan_kuliah} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background" />
+                      <label
+                        htmlFor="jurusan_kuliah"
+                        className="text-sm font-medium"
+                      >
+                        Jurusan Kuliah
+                      </label>
+                      <input
+                        id="jurusan_kuliah"
+                        name="jurusan_kuliah"
+                        value={formData.jurusan_kuliah}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="tahun_lulus_sma" className="text-sm font-medium">Tahun Lulus SMA</label>
-                      <input id="tahun_lulus_sma" name="tahun_lulus_sma" value={formData.tahun_lulus_sma} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background" />
+                      <label
+                        htmlFor="tahun_lulus_sma"
+                        className="text-sm font-medium"
+                      >
+                        Tahun Lulus SMA
+                      </label>
+                      <input
+                        id="tahun_lulus_sma"
+                        name="tahun_lulus_sma"
+                        value={formData.tahun_lulus_sma}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="tahun_masuk_kuliah" className="text-sm font-medium">Tahun Masuk Kuliah</label>
-                      <input id="tahun_masuk_kuliah" name="tahun_masuk_kuliah" value={formData.tahun_masuk_kuliah} onChange={handleChange} className="w-full p-2 rounded-md border border-input bg-background" />
+                      <label
+                        htmlFor="tahun_masuk_kuliah"
+                        className="text-sm font-medium"
+                      >
+                        Tahun Masuk Kuliah
+                      </label>
+                      <input
+                        id="tahun_masuk_kuliah"
+                        name="tahun_masuk_kuliah"
+                        value={formData.tahun_masuk_kuliah}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
                     </div>
                   </>
                 )}
 
                 <div className="pt-2">
-                  <button type="submit" className="bg-primary text-primary-foreground py-2 px-4 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none" disabled>
+                  <button
+                    type="submit"
+                    className="bg-primary text-primary-foreground py-2 px-4 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                    disabled
+                  >
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
                   {/* <button type="submit" className="bg-primary text-primary-foreground py-2 px-4 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none" disabled={saving}>
@@ -234,16 +323,20 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <div className="font-medium">Theme</div>
-                  <p className="text-sm text-muted-foreground">Select a theme for your dashboard.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Select a theme for your dashboard.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <ThemeSwitcher />
-                  <span className="text-sm">Toggle between light and dark mode</span>
+                  <span className="text-sm">
+                    Toggle between light and dark mode
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <div className="border rounded-lg">
             <div className="px-6 py-4 border-b">
               <h2 className="text-xl font-semibold">Account</h2>
@@ -252,9 +345,13 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <div className="font-medium">Sign Out</div>
-                  <p className="text-sm text-muted-foreground">Sign out from your account.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Sign out from your account.
+                  </p>
                 </div>
-                <button className="bg-destructive/10 text-destructive py-2 px-4 rounded-md font-medium hover:bg-destructive/20 transition-colors">Sign Out</button>
+                <button className="bg-destructive/10 text-destructive py-2 px-4 rounded-md font-medium hover:bg-destructive/20 transition-colors">
+                  Sign Out
+                </button>
               </div>
             </div>
           </div>
@@ -262,4 +359,4 @@ export default function SettingsPage() {
       </div>
     </div>
   );
-} 
+}

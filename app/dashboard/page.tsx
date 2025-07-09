@@ -29,8 +29,8 @@ export default function Dashboard() {
 
         // Check if user has completed their profile
         const { data: profileData, error } = await supabase
-          .from("profiles")
-          .select("id, name, user_type")
+          .from("profil")
+          .select("id, name:nama, user_type:tipe_user")
           .eq("id", user.id)
           .single();
 
