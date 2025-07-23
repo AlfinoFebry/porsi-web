@@ -12,7 +12,20 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!error && data.user) {
+      // Check if this is an admin registration from OAuth
+      // We'll create a client-side script to handle this since we can't access localStorage on server
+      const response = NextResponse.redirect(
+        redirectTo ? `${origin}${redirectTo}` : `${origin}/dashboard`
+      );
+
+      // Add a script to handle admin profile creation on the client side
+      response.headers.set('X-Admin-Profile-Check', 'true');
+
+      return response;
+    }
   }
 
   if (redirectTo) {

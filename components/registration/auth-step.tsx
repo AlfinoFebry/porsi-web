@@ -11,9 +11,10 @@ import Link from "next/link";
 
 interface AuthStepProps {
   onSuccess: () => void;
+  redirectTo?: string;
 }
 
-export function AuthStep({ onSuccess }: AuthStepProps) {
+export function AuthStep({ onSuccess, redirectTo = "/register" }: AuthStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const supabase = createClient();
@@ -35,7 +36,7 @@ export function AuthStep({ onSuccess }: AuthStepProps) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=/register`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=${redirectTo}`,
         },
       });
 
@@ -68,7 +69,7 @@ export function AuthStep({ onSuccess }: AuthStepProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/register`,
+          redirectTo: `${window.location.origin}${redirectTo}`,
         },
       });
 

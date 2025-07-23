@@ -19,19 +19,19 @@ export const useUser = () => useContext(UserContext);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     const supabase = createClient();
-    
+
     // Get initial user
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setIsLoading(false);
     };
-    
+
     getUser();
-    
+
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -39,12 +39,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     );
-    
+
     return () => {
       subscription.unsubscribe();
     };
   }, []);
-  
+
   return (
     <UserContext.Provider value={{ user, isLoading }}>
       {children}

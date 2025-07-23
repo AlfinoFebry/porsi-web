@@ -14,6 +14,7 @@ import {
   X,
   ChevronDown,
   UserCog,
+  Users,
 } from "lucide-react";
 import { ThemeSwitcher } from "./theme-switcher";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ export function DashboardNav() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
   const [profileLoading, setProfileLoading] = useState<boolean>(true);
+  const [userType, setUserType] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Get collapse state from localStorage on mount
@@ -91,6 +93,7 @@ export function DashboardNav() {
 
         if (!user) {
           setIsProfileComplete(false);
+          setUserType(null);
           return;
         }
 
@@ -107,12 +110,15 @@ export function DashboardNav() {
           !profileData.user_type
         ) {
           setIsProfileComplete(false);
+          setUserType(profileData?.user_type || null);
         } else {
           setIsProfileComplete(true);
+          setUserType(profileData.user_type);
         }
       } catch (err) {
         console.error("Error checking profile completeness:", err);
         setIsProfileComplete(false);
+        setUserType(null);
       } finally {
         setProfileLoading(false);
       }
@@ -121,40 +127,66 @@ export function DashboardNav() {
     checkProfileCompletion();
   }, []);
 
-  const navItems: NavItem[] = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: <Home className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/portfolio",
-      label: "Portfolio",
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/inisialisasi-data",
-      label: "Inisialisasi Data",
-      icon: <UserCog className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/insert-data",
-      label: "Insert Data",
-      icon: <FilePlus className="h-5 w-5" />,
-    },
-    {
-      href: "/dashboard/settings",
-      label: "Settings",
-      icon: <Settings className="h-5 w-5" />,
-    },
-  ];
+  // Define navigation items based on user type
+  const getNavItems = (): NavItem[] => {
+    if (userType === 'admin') {
+      // Admin navigation items
+      return [
+        {
+          href: "/dashboard",
+          label: "Dashboard",
+          icon: <Home className="h-5 w-5" />,
+        },
+        {
+          href: "/dashboard/data-siswa",
+          label: "Data Siswa",
+          icon: <Users className="h-5 w-5" />,
+        },
+        {
+          href: "/dashboard/settings",
+          label: "Settings",
+          icon: <Settings className="h-5 w-5" />,
+        },
+      ];
+    }
 
-  // Filter out the "Inisialisasi Data" tab if the profile is complete
-  const filteredNavItems =
-    isProfileComplete === true
-      ? navItems.filter(
-          (item) => item.href !== "/dashboard/inisialisasi-data"
-        )
+    // Student/Alumni navigation items (default)
+    return [
+      {
+        href: "/dashboard",
+        label: "Dashboard",
+        icon: <Home className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/portfolio",
+        label: "Portfolio",
+        icon: <BarChart3 className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/inisialisasi-data",
+        label: "Inisialisasi Data",
+        icon: <UserCog className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/insert-data",
+        label: "Insert Data",
+        icon: <FilePlus className="h-5 w-5" />,
+      },
+      {
+        href: "/dashboard/settings",
+        label: "Settings",
+        icon: <Settings className="h-5 w-5" />,
+      },
+    ];
+  };
+
+  const navItems = getNavItems();
+
+  // Filter out the "Inisialisasi Data" tab if the profile is complete (only for non-admin users)
+  const filteredNavItems = userType === 'admin'
+    ? navItems
+    : isProfileComplete === true
+      ? navItems.filter((item) => item.href !== "/dashboard/inisialisasi-data")
       : navItems;
 
   const handleSignOut = async () => {
@@ -193,7 +225,7 @@ export function DashboardNav() {
             <Menu className="h-5 w-5" />
           </button>
           <Link href="/dashboard" className="ml-4 font-bold text-xl">
-            PortofolioSiswa
+            {userType === 'admin' ? 'PortofolioSiswa Admin' : 'PortofolioSiswa'}
           </Link>
         </div>
         <div className="ml-auto flex items-center gap-4 px-4">

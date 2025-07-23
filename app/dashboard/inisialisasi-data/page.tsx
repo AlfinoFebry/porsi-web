@@ -28,7 +28,7 @@ export default function InisialisasiDataPage() {
   const [hobby, setHobby] = useState<string>("");
   const [desiredMajor, setDesiredMajor] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
@@ -96,8 +96,19 @@ export default function InisialisasiDataPage() {
         updated_at: new Date().toISOString(),
       };
 
+      console.log('Profile data to upsert:', profileData);
       const { error: profileError } = await supabase.from('profil').upsert(profileData);
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile upsert error:', {
+          error: profileError,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          code: profileError.code
+        });
+        throw profileError;
+      }
+      console.log('Profile upserted successfully');
 
       // 2. Insert academic records
       const recordEntries: any[] = [];
@@ -127,10 +138,34 @@ export default function InisialisasiDataPage() {
         for (const ach of achievements) {
           let imageUrl: string | null = null;
           if (ach.file) {
-            const filePath = `certifications/${user.id}/${Date.now()}_${ach.file.name}`;
-            const { error: uploadError } = await supabase.storage.from('certifications').upload(filePath, ach.file);
-            if (uploadError && uploadError.message !== 'The resource already exists') throw uploadError;
-            const { data: publicUrlData } = supabase.storage.from('certifications').getPublicUrl(filePath);
+            // Fix the file path - remove duplicate "certifications"
+            const filePath = `${user.id}/${Date.now()}_${ach.file.name}`;
+
+            console.log('Uploading achievement file to path:', filePath);
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('certifications')
+              .upload(filePath, ach.file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error('Achievement upload error:', uploadError);
+              if (uploadError.message.includes("already exists")) {
+                console.warn(`File already exists: ${filePath}, skipping upload`);
+              } else if (uploadError.message.includes("Bucket not found") || uploadError.message.includes("bucket does not exist")) {
+                throw new Error("Storage bucket 'certifications' belum dibuat. Silakan buat bucket di Supabase Dashboard terlebih dahulu.");
+              } else if (uploadError.message.includes("row-level security policy") || uploadError.message.includes("Unauthorized")) {
+                throw new Error("Tidak memiliki izin upload. Silakan periksa RLS policies untuk storage bucket 'certifications'.");
+              } else {
+                throw uploadError;
+              }
+            }
+
+            const { data: publicUrlData } = supabase.storage
+              .from('certifications')
+              .getPublicUrl(filePath);
             imageUrl = publicUrlData.publicUrl;
           }
           achievementRows.push({
@@ -142,7 +177,10 @@ export default function InisialisasiDataPage() {
         }
         if (achievementRows.length) {
           const { error: achError } = await supabase.from('sertifikat').insert(achievementRows);
-          if (achError) console.error('Achievement insert error:', achError);
+          if (achError) {
+            console.error('Achievement insert error:', achError);
+            throw achError;
+          }
         }
       }
 
@@ -200,16 +238,14 @@ export default function InisialisasiDataPage() {
                 {steps.map((step, index) => (
                   <div
                     key={index}
-                    className={`flex flex-col items-center ${
-                      index + 1 <= currentStep ? "text-primary" : ""
-                    }`}
+                    className={`flex flex-col items-center ${index + 1 <= currentStep ? "text-primary" : ""
+                      }`}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-medium ${
-                        index + 1 <= currentStep
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-muted-foreground"
-                      }`}
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-medium ${index + 1 <= currentStep
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-muted-foreground"
+                        }`}
                     >
                       {index + 1}
                     </div>
@@ -222,12 +258,12 @@ export default function InisialisasiDataPage() {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent>
             {currentStep === 1 && (
               <UserTypeStep onSelect={handleUserTypeSelect} />
             )}
-            
+
             {currentStep === 2 && (
               <BiodataStep
                 userType={userType!}
@@ -236,7 +272,7 @@ export default function InisialisasiDataPage() {
                 onBack={() => setCurrentStep(1)}
               />
             )}
-            
+
             {currentStep === 3 && (
               <ReportStep
                 userType={userType!}
@@ -247,7 +283,7 @@ export default function InisialisasiDataPage() {
                 isLoading={false}
               />
             )}
-            
+
             {currentStep === 4 && (
               <AchievementStep
                 achievements={achievements}
@@ -256,7 +292,7 @@ export default function InisialisasiDataPage() {
                 onBack={() => setCurrentStep(3)}
               />
             )}
-            
+
             {currentStep === 5 && (
               <OrganizationStep
                 organizations={organizations}

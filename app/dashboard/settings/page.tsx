@@ -24,7 +24,12 @@ interface AlumniForm extends BaseForm {
   tahun_masuk_kuliah: string;
 }
 
-type FormState = SiswaForm | AlumniForm | null;
+interface AdminForm extends BaseForm {
+  user_type: "admin";
+  nama_sekolah: string;
+}
+
+type FormState = SiswaForm | AlumniForm | AdminForm | null;
 
 export default function SettingsPage() {
   const supabase = createClient();
@@ -57,6 +62,13 @@ export default function SettingsPage() {
             nama_sekolah: profile.nama_sekolah || "",
             jurusan: profile.jurusan || "",
             class: profile.class || "",
+          });
+        } else if (profile.user_type === "admin") {
+          setFormData({
+            user_type: "admin",
+            name: profile.name || "",
+            email: profile.email || user.email || "",
+            nama_sekolah: profile.nama_sekolah || "",
           });
         } else {
           setFormData({
@@ -106,6 +118,8 @@ export default function SettingsPage() {
         updateData.nama_sekolah = formData.nama_sekolah;
         updateData.jurusan = formData.jurusan;
         updateData.kelas = formData.class;
+      } else if (formData.user_type === "admin") {
+        updateData.nama_sekolah = formData.nama_sekolah;
       } else {
         updateData.nama_perguruan_tinggi = formData.nama_perguruan_tinggi;
         updateData.jurusan_kuliah = formData.jurusan_kuliah;
@@ -226,6 +240,32 @@ export default function SettingsPage() {
                       </select>
                     </div>
                   </>
+                ) : formData.user_type === "admin" ? (
+                  <>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="nama_sekolah"
+                        className="text-sm font-medium"
+                      >
+                        Nama Sekolah
+                      </label>
+                      <input
+                        id="nama_sekolah"
+                        name="nama_sekolah"
+                        value={formData.nama_sekolah}
+                        onChange={handleChange}
+                        className="w-full p-2 rounded-md border border-input bg-background"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-muted-foreground">
+                        User Type: Administrator
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Anda memiliki akses admin untuk mengelola data siswa.
+                      </p>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div className="space-y-2">
@@ -295,7 +335,7 @@ export default function SettingsPage() {
                   <button
                     type="submit"
                     className="bg-primary text-primary-foreground py-2 px-4 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                    disabled
+                    disabled={saving}
                   >
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
