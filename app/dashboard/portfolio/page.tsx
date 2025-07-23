@@ -344,6 +344,26 @@ export default function PortfolioPage() {
     return Math.round(total / records.length);
   };
 
+  // Map semester number to human-friendly class + semester label
+  const getClassSemesterLabel = (semester: number) => {
+    switch (semester) {
+      case 1:
+        return "Kelas X Semester 1";
+      case 2:
+        return "Kelas X Semester 2";
+      case 3:
+        return "Kelas XI Semester 1";
+      case 4:
+        return "Kelas XI Semester 2";
+      case 5:
+        return "Kelas XII Semester 1";
+      case 6:
+        return "Kelas XII Semester 2";
+      default:
+        return `Semester ${semester}`;
+    }
+  };
+
   const getDisplayText = () => {
     if (!userData) return { name: "", subtitle: "" };
 
@@ -791,7 +811,7 @@ export default function PortfolioPage() {
               return (
                 <div key={semester} className="border rounded-lg p-6 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium">Semester {semester}</h3>
+                    <h3 className="text-lg font-medium">{getClassSemesterLabel(semester)}</h3>
                     <div className="text-sm text-muted-foreground">
                       Rata-rata:{" "}
                       <span className="font-medium text-foreground">
