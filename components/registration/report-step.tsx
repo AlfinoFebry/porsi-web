@@ -373,7 +373,7 @@ export function ReportStep({
       </div>
 
       {/* OCR Upload Section */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Camera className="w-5 h-5" />
@@ -469,7 +469,7 @@ export function ReportStep({
             )}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Additional Subjects Selection */}
       {otherSubjects.length > 0 && (

@@ -12,7 +12,7 @@ import { ArrowLeft } from "lucide-react";
 interface BiodataStepProps {
   userType: UserType;
   onSubmit: (data: BiodataForm) => void;
-  onBack: () => void;
+  onBack?: () => void;
   initialData?: BiodataForm;
 }
 
@@ -91,14 +91,16 @@ export function BiodataStep({ userType, onSubmit, onBack, initialData }: Biodata
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="p-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="p-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        )}
         <div>
           <h2 className="text-xl font-semibold">Biodata Pribadi</h2>
           <p className="text-sm text-muted-foreground">
@@ -270,15 +272,17 @@ export function BiodataStep({ userType, onSubmit, onBack, initialData }: Biodata
         )}
 
         <div className="flex space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onBack}
-            className="flex-1"
-          >
-            Kembali
-          </Button>
-          <Button type="submit" className="flex-1">
+          {onBack && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onBack}
+              className="flex-1"
+            >
+              Kembali
+            </Button>
+          )}
+          <Button type="submit" className={onBack ? "flex-1" : "w-full"}>
             Lanjutkan
           </Button>
         </div>

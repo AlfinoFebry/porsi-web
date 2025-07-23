@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { UserTypeStep } from "@/components/registration/user-type-step";
 import { BiodataStep } from "@/components/registration/biodata-step";
 import { ReportStep } from "@/components/registration/report-step";
 import { AchievementStep, AchievementItem } from "@/components/registration/achievement-step";
@@ -16,7 +15,7 @@ import { UserType, BiodataForm, ReportData } from "@/lib/types";
 
 export default function InisialisasiDataPage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [userType, setUserType] = useState<UserType | null>(null);
+  const [userType] = useState<UserType>("siswa"); // Automatically set as siswa
   const [biodataForm, setBiodataForm] = useState<BiodataForm>({
     name: "",
     dateOfBirth: "",
@@ -34,31 +33,25 @@ export default function InisialisasiDataPage() {
   const supabase = createClient();
 
   const steps = [
-    { title: "Profil", description: "Pilih status Anda" },
     { title: "Biodata", description: "Isi data pribadi" },
     { title: "Rapor", description: "Input nilai rapor" },
     { title: "Prestasi", description: "Tambah sertifikat" },
     { title: "Organisasi", description: "Minat & organisasi" },
   ];
 
-  const handleUserTypeSelect = (type: UserType) => {
-    setUserType(type);
-    setCurrentStep(2);
-  };
-
   const handleBiodataSubmit = (data: BiodataForm) => {
     setBiodataForm(data);
-    setCurrentStep(3);
+    setCurrentStep(2);
   };
 
   const handleReportNext = (data: ReportData) => {
     setReportData(data);
-    setCurrentStep(4);
+    setCurrentStep(3);
   };
 
   const handleAchievementNext = (data: AchievementItem[]) => {
     setAchievements(data);
-    setCurrentStep(5);
+    setCurrentStep(4);
   };
 
   const handleOrganizationSubmit = async (data: { organizations: OrganizationItem[]; hobby: string; desiredMajor: string; }) => {
@@ -82,16 +75,9 @@ export default function InisialisasiDataPage() {
         tipe_user: userType,
         hobi: data.hobby,
         jurusan_impian: data.desiredMajor,
-        ...(userType === "siswa" ? {
-          nama_sekolah: biodataForm.namaSekolah,
-          jurusan: biodataForm.jurusan,
-          kelas: biodataForm.class,
-        } : {
-          nama_perguruan_tinggi: biodataForm.namaPerguruanTinggi,
-          tahun_lulus_sma: biodataForm.tahunLulusSMA,
-          tahun_masuk_kuliah: biodataForm.tahunMasukKuliah,
-          jurusan_kuliah: biodataForm.jurusanKuliah,
-        }),
+        nama_sekolah: biodataForm.namaSekolah,
+        jurusan: biodataForm.jurusan,
+        kelas: biodataForm.class,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -220,9 +206,9 @@ export default function InisialisasiDataPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Inisialisasi Data</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Inisialisasi Data Siswa</h1>
         <p className="text-muted-foreground mt-2">
-          Lengkapi data Anda untuk membuat portofolio yang komprehensif.
+          Lengkapi data siswa Anda untuk membuat portofolio yang komprehensif.
         </p>
       </div>
 
@@ -261,45 +247,41 @@ export default function InisialisasiDataPage() {
 
           <CardContent>
             {currentStep === 1 && (
-              <UserTypeStep onSelect={handleUserTypeSelect} />
-            )}
-
-            {currentStep === 2 && (
               <BiodataStep
-                userType={userType!}
+                userType={userType}
                 initialData={biodataForm}
                 onSubmit={handleBiodataSubmit}
-                onBack={() => setCurrentStep(1)}
+              // No onBack prop - this is the first step
               />
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 2 && (
               <ReportStep
-                userType={userType!}
+                userType={userType}
                 biodataForm={biodataForm}
                 initialData={reportData}
                 onSubmit={handleReportNext}
-                onBack={() => setCurrentStep(2)}
+                onBack={() => setCurrentStep(1)}
                 isLoading={false}
               />
             )}
 
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <AchievementStep
                 achievements={achievements}
                 onSubmit={handleAchievementNext}
-                onSkip={() => setCurrentStep(5)}
-                onBack={() => setCurrentStep(3)}
+                onSkip={() => setCurrentStep(4)}
+                onBack={() => setCurrentStep(2)}
               />
             )}
 
-            {currentStep === 5 && (
+            {currentStep === 4 && (
               <OrganizationStep
                 organizations={organizations}
                 hobby={hobby}
                 desiredMajor={desiredMajor}
                 onSubmit={handleOrganizationSubmit}
-                onBack={() => setCurrentStep(4)}
+                onBack={() => setCurrentStep(3)}
               />
             )}
           </CardContent>
