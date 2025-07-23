@@ -29,9 +29,8 @@ export default function LandingNav() {
     };
   }, []);
 
-  // Hide navigation on dashboard pages and auth pages
+  // Hide navigation only on dashboard pages
   const isDashboardPage = pathname?.startsWith('/dashboard');
-  const isAuthPage = pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up') || pathname?.startsWith('/register') || pathname?.startsWith('/admin-register');
 
   if (!authChecked) {
     return (
@@ -42,8 +41,8 @@ export default function LandingNav() {
     );
   }
 
-  // Don't render navigation on dashboard pages or auth pages
-  if (isDashboardPage || isAuthPage) {
+  // Don't render navigation only on dashboard pages
+  if (isDashboardPage) {
     return null;
   }
 
