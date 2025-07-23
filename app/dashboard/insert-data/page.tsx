@@ -307,7 +307,28 @@ export default function InsertDataPage() {
       </div>
       <div className="space-y-2">
         <Label>File Gambar (Opsional)</Label>
-        <Input type="file" accept="image/*" onChange={(e) => setAchievement({ ...achievement, file: e.target.files?.[0] || null })} />
+        <p className="text-xs text-muted-foreground">Format: JPG, PNG, WEBP. Maksimal 10MB.</p>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0] || null;
+            if (file) {
+              // Validate file type
+              if (!file.type.startsWith("image/")) {
+                setMessage("File harus berupa gambar (JPG, PNG, dll).");
+                return;
+              }
+
+              // Validate file size (10MB limit)
+              if (file.size > 10 * 1024 * 1024) {
+                setMessage("Ukuran file maksimal 10MB. Silakan kompres gambar terlebih dahulu.");
+                return;
+              }
+            }
+            setAchievement({ ...achievement, file });
+          }}
+        />
       </div>
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
       <Button onClick={handleAchievementSubmit} disabled={isSubmitting} className="w-full">

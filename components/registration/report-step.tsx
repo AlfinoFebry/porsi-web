@@ -168,58 +168,7 @@ export function ReportStep({
     }));
   };
 
-  // Helper function to compress image
-  const compressImage = (file: File, maxSizeMB: number = 2): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
 
-      img.onload = () => {
-        // Calculate new dimensions to keep aspect ratio
-        const maxWidth = 1920;
-        const maxHeight = 1080;
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Draw and compress
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              reject(new Error('Failed to compress image'));
-            }
-          },
-          'image/jpeg',
-          0.8 // 80% quality
-        );
-      };
-
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = URL.createObjectURL(file);
-    });
-  };
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -240,9 +189,9 @@ export function ReportStep({
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      // 50MB limit for original file
-      setUploadResult("Ukuran file maksimal 50MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      // 10MB limit
+      setUploadResult("Ukuran file maksimal 10MB.");
       return;
     }
 
@@ -250,24 +199,9 @@ export function ReportStep({
     setUploadResult("Sedang memproses gambar... Mohon tunggu 1-5 menit.");
 
     try {
-      // Compress image if it's larger than 2MB
-      let processedFile = file;
-      if (file.size > 2 * 1024 * 1024) {
-        setUploadResult("Mengompres gambar untuk mengurangi ukuran...");
-        try {
-          processedFile = await compressImage(file, 2);
-          console.log(`Image compressed: ${file.size} -> ${processedFile.size} bytes`);
-        } catch (compressionError) {
-          console.warn('Image compression failed, using original file:', compressionError);
-          processedFile = file;
-        }
-      }
-
-      setUploadResult("Sedang memproses gambar dengan OCR... Mohon tunggu 1-5 menit.");
-
       // Create FormData with 'file' field as expected by the API
       const formData = new FormData();
-      formData.append("file", processedFile);
+      formData.append("file", file);
 
       // Create a timeout promise (6 minutes to be safe)
       const timeoutPromise = new Promise((_, reject) =>
@@ -305,7 +239,7 @@ export function ReportStep({
             `Format file tidak didukung atau ada masalah dengan gambar. Pastikan gambar jelas dan berisi teks rapor. (${response.status})`
           );
         } else if (response.status === 413) {
-          throw new Error("File terlalu besar. Gambar sudah dikompres otomatis, tapi masih terlalu besar. Coba gunakan gambar yang lebih kecil atau masukkan nilai secara manual.");
+          throw new Error("File terlalu besar. Coba gunakan gambar yang lebih kecil atau masukkan nilai secara manual.");
         } else {
           throw new Error(errorMessage);
         }
@@ -459,6 +393,7 @@ export function ReportStep({
               <li>Teks terlihat dengan jelas</li>
               <li>Format JPG, PNG, atau WEBP</li>
               <li>Ukuran maksimal 10MB</li>
+              <li>Untuk file besar, kompres gambar sebelum upload</li>
             </ul>
           </div>
 

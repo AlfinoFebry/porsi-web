@@ -38,6 +38,19 @@ export function AchievementStep({ achievements: initialAchievements, onSubmit, o
 
   const handleFileChange = (index: number, file: File | null) => {
     if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("File harus berupa gambar (JPG, PNG, dll).");
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Ukuran file maksimal 10MB. Silakan kompres gambar terlebih dahulu.");
+      return;
+    }
+
     const preview = URL.createObjectURL(file);
     setAchievements(prev => prev.map((ach, i) => i === index ? { ...ach, file, preview } : ach));
   };
@@ -93,6 +106,7 @@ export function AchievementStep({ achievements: initialAchievements, onSubmit, o
 
               <div className="space-y-2">
                 <Label>Dokumen (Gambar)</Label>
+                <p className="text-xs text-muted-foreground">Format: JPG, PNG, WEBP. Maksimal 10MB.</p>
                 <div className="flex items-center space-x-3">
                   <input
                     ref={el => {
