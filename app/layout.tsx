@@ -7,6 +7,7 @@ import "./globals.css";
 import LandingNav from "@/components/landingNav";
 import { ToastContainer } from "@/components/ui/toast";
 import SiteFooter from "@/components/site-footer";
+import { CookieCleanup } from "@/components/cookie-cleanup";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -37,6 +38,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <CookieCleanup />
           <div className="min-h-screen flex flex-col">
             <LandingNav />
             <main className="flex-1">

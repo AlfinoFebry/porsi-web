@@ -19,7 +19,7 @@ import {
 import { ThemeSwitcher } from "./theme-switcher";
 import { cn } from "@/lib/utils";
 import { useUser } from "./user-provider";
-import { createClient } from "@/utils/supabase/client";
+import { createRobustClient, robustAuth, robustDb } from "@/utils/supabase/robust-client";
 import { useRouter } from "next/navigation";
 
 interface NavItem {
@@ -85,35 +85,39 @@ export function DashboardNav() {
   // `name` and `user_type` are filled.
   useEffect(() => {
     const checkProfileCompletion = async () => {
-      const supabase = createClient();
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await robustAuth.getUser();
 
-        if (!user) {
+        if (userError || !user) {
           setIsProfileComplete(false);
           setUserType(null);
           return;
         }
 
-        const { data: profileData, error } = await supabase
-          .from("profil")
-          .select("name:nama, user_type:tipe_user")
-          .eq("id", user.id)
-          .single();
+        const profileResult = await robustDb.safeQuery(
+          async (client) => {
+            return await client
+              .from("profil")
+              .select("name:nama, user_type:tipe_user")
+              .eq("id", user.id)
+              .single();
+          },
+          null,
+          'checkProfileCompletion'
+        );
 
         if (
-          error ||
-          !profileData ||
-          !profileData.name ||
-          !profileData.user_type
+          !profileResult ||
+          profileResult.error ||
+          !profileResult.data ||
+          !profileResult.data.name ||
+          !profileResult.data.user_type
         ) {
           setIsProfileComplete(false);
-          setUserType(profileData?.user_type || null);
+          setUserType(profileResult?.data?.user_type || null);
         } else {
           setIsProfileComplete(true);
-          setUserType(profileData.user_type);
+          setUserType(profileResult.data.user_type);
         }
       } catch (err) {
         console.error("Error checking profile completeness:", err);
@@ -190,8 +194,7 @@ export function DashboardNav() {
       : navItems;
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await robustAuth.signOut();
     router.push("/sign-in");
   };
 

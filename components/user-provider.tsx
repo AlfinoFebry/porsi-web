@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createRobustClient, robustAuth, robustDb } from "@/utils/supabase/robust-client";
 import { User } from "@supabase/supabase-js";
 
 type UserContextType = {
@@ -25,42 +25,61 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userType, setUserType] = useState<"siswa" | "alumni" | "admin" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   const fetchUserType = async (userId: string) => {
+    if (!isMounted) return;
+    
     try {
       setIsProfileLoading(true);
-      const supabase = createClient();
+      
+      const result = await robustDb.safeQuery(
+        async (client) => {
+          return await client
+            .from("profil")
+            .select("tipe_user")
+            .eq("id", userId)
+            .single();
+        },
+        null,
+        'fetchUserType'
+      );
 
-      const { data: profileData, error } = await supabase
-        .from("profil")
-        .select("tipe_user")
-        .eq("id", userId)
-        .single();
+      if (!isMounted) return;
 
-      if (error) {
-        console.error("User type fetch error:", error);
+      if (result && result.data && !result.error) {
+        setUserType(result.data.tipe_user);
+      } else {
+        console.error("User type fetch error:", result?.error);
         setUserType(null);
-      } else if (profileData) {
-        setUserType(profileData.tipe_user);
       }
     } catch (error) {
+      if (!isMounted) return;
       console.error("User type fetch error:", error);
       setUserType(null);
     } finally {
-      setIsProfileLoading(false);
+      if (isMounted) {
+        setIsProfileLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    const supabase = createClient();
+    setIsMounted(true);
+    const supabase = createRobustClient();
 
-    // Get initial user
+    // Get initial user with robust auth
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      
+      const { data: { user }, error } = await robustAuth.getUser();
+      
+      if (!isMounted) return;
+      
       setUser(user);
       setIsLoading(false);
 
-      if (user) {
+      if (user && !error) {
         await fetchUserType(user.id);
       } else {
         setUserType(null);
@@ -73,6 +92,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
+        
         setUser(session?.user ?? null);
         setIsLoading(false);
 
@@ -86,6 +107,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
+      setIsMounted(false);
       subscription.unsubscribe();
     };
   }, []);
