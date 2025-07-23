@@ -258,13 +258,11 @@ export default function PortfolioPage() {
 
       if (recordsError) {
         console.error("Academic records error:", recordsError);
-        // Don't throw error for academic records, just log it
         setAcademicRecords([]);
       } else {
         setAcademicRecords(records || []);
       }
 
-      // Fetch recent achievements (latest 5)
       const { data: ach, error: achError } = await supabase
         .from("sertifikat")
         .select("id, title:judul, image_url, created_at")
@@ -276,7 +274,6 @@ export default function PortfolioPage() {
         setAchievements(ach || []);
       }
 
-      // Fetch recent organizations (latest 5)
       const { data: orgs, error: orgError } = await supabase
         .from("organisasi")
         .select("id, name:nama, year:tahun, position:posisi, created_at")
@@ -288,7 +285,6 @@ export default function PortfolioPage() {
         setOrganizations(orgs || []);
       }
 
-      /* ──────────────────────── fetch stored recommendation ─────────────────────── */
       const { data: recRow, error: recError } = await supabase
         .from("rekomendasi")
         .select("prediction")
@@ -296,7 +292,6 @@ export default function PortfolioPage() {
         .single();
 
       if (recError && recError.code !== "PGRST116") {
-        // PGRST116 is "not found"
         console.error("Recommendation fetch error:", recError);
       } else {
         setRecommendation(recRow?.prediction ?? null);
@@ -332,7 +327,6 @@ export default function PortfolioPage() {
       {} as Record<number, AcademicRecord[]>
     );
 
-    // Sort semesters
     return Object.keys(grouped)
       .map(Number)
       .sort((a, b) => a - b)
@@ -373,9 +367,7 @@ export default function PortfolioPage() {
     }
   };
 
-  /* ─────────────────────── helper to build CART payload ─────────────────────── */
   const buildCartPayload = () => {
-    // Mapping from DB subject names (as saved in data_akademik) ➔ API keys
     const subjectMap: Record<string, string> = {
       "Pendidikan Agama dan Budi Pekerti": "Pendidikan_Agama",
       "PPKn (Pendidikan Pancasila dan Kewarganegaraan)": "Pkn",
@@ -384,22 +376,20 @@ export default function PortfolioPage() {
       "Sejarah Indonesia": "Sejarah_Indonesia",
       "Bahasa Inggris": "Bahasa_Inggris",
       "Seni Budaya": "Seni_Budaya",
-      "PKWu": "PKWu",
+      PKWu: "PKWu",
       "PJOK (Pendidikan Jasmani, Olahraga, dan Kesehatan)": "Penjaskes",
       "Muatan Lokal Bahasa Daerah": "Mulok",
-      // PKWu di-back-map ke Prakarya/Seni Budaya sehingga pakai key sama
       "Matematika Peminatan": "Matematika_Peminatan",
-      "Biologi": "Biologi",
-      "Fisika": "Fisika",
-      "Kimia": "Kimia",
+      Biologi: "Biologi",
+      Fisika: "Fisika",
+      Kimia: "Kimia",
       "Lintas Minat": "Lintas_Minat",
-      "Geografi": "Geografi",
-      "Sejarah": "Sejarah_Minat",
-      "Sosiologi": "Sosiologi",
-      "Ekonomi": "Ekonomi",
+      Geografi: "Geografi",
+      Sejarah: "Sejarah_Minat",
+      Sosiologi: "Sosiologi",
+      Ekonomi: "Ekonomi",
     };
 
-    // Prepare list of API keys CART expects (retain ordering for readability)
     const apiSubjects = [
       "Pendidikan_Agama",
       "Pkn",
@@ -424,9 +414,7 @@ export default function PortfolioPage() {
 
     const avg: Record<string, number> = {};
 
-    // Calculate average per API subject key using mapping
     apiSubjects.forEach((apiKey) => {
-      // find corresponding DB subject(s)
       const dbSubjects = Object.entries(subjectMap)
         .filter(([, key]) => key === apiKey)
         .map(([db]) => db);
@@ -438,25 +426,17 @@ export default function PortfolioPage() {
       if (relatedRecords.length) {
         avg[apiKey] = Math.round(
           relatedRecords.reduce((sum, rec) => sum + rec.score, 0) /
-            relatedRecords.length
+          relatedRecords.length
         );
       }
     });
 
-    // Fill missing with -1
     apiSubjects.forEach((k) => {
       if (avg[k] === undefined) avg[k] = -1;
     });
 
-    // Handle cross-major (Lintas Minat) aggregation and exclusions
     if (userData?.jurusan === "IPA") {
-      const crossKeys = [
-        "Geografi",
-        "Sejarah_Minat",
-        "Sosiologi",
-        "Ekonomi",
-      ];
-      // Calculate average of any IPS-specific subjects taken
+      const crossKeys = ["Geografi", "Sejarah_Minat", "Sosiologi", "Ekonomi"];
       const crossScores: number[] = [];
       academicRecords.forEach((rec) => {
         const apiKey = subjectMap[rec.subject];
@@ -469,15 +449,9 @@ export default function PortfolioPage() {
           crossScores.reduce((t, s) => t + s, 0) / crossScores.length
         );
       }
-      // Exclude individual IPS subjects
       crossKeys.forEach((k) => (avg[k] = -1));
     } else if (userData?.jurusan === "IPS") {
-      const crossKeys = [
-        "Matematika_Peminatan",
-        "Fisika",
-        "Biologi",
-        "Kimia",
-      ];
+      const crossKeys = ["Matematika_Peminatan", "Fisika", "Biologi", "Kimia"];
       const crossScores: number[] = [];
       academicRecords.forEach((rec) => {
         const apiKey = subjectMap[rec.subject];
@@ -500,28 +474,25 @@ export default function PortfolioPage() {
       Hobi: userData?.hobby ?? "-",
     };
   };
-  /* ───────────────────────────────────────────────────────────────────────────── */
 
-  /* ─────────────────────── check if desired major matches recommendation ─────────────────────── */
   const checkDesiredMajorMatch = (
     recommendation: string,
     desiredMajor: string
   ) => {
-    // Check if the recommendation key exists in programStudi
     if (!programStudi[recommendation as keyof typeof programStudi]) {
       return false;
     }
 
-    // Get the array of majors for the recommendation category
     const majorsInCategory =
       programStudi[recommendation as keyof typeof programStudi];
 
-    // Check if the desired major exists in the recommendation category
-    return majorsInCategory.includes(desiredMajor);
-  };
-  /* ───────────────────────────────────────────────────────────────────────────── */
+    // Split desired majors by comma and trim whitespace
+    const desiredMajors = desiredMajor.split(',').map(major => major.trim());
 
-  /* ───────────── get / refresh recommendation handlers ───────────── */
+    // Check if any of the desired majors match the recommendation category
+    return desiredMajors.some(major => majorsInCategory.includes(major));
+  };
+
   const getRecommendation = async () => {
     try {
       setRecLoading(true);
@@ -547,7 +518,6 @@ export default function PortfolioPage() {
         throw new Error("No prediction received from API");
       }
 
-      // Persist to DB with better error handling
       const { error: dbError } = await supabase.from("rekomendasi").upsert({
         user_id: userData!.id,
         prediction: data.prediction,
@@ -576,7 +546,6 @@ export default function PortfolioPage() {
       getRecommendation();
     }
   };
-  /* ───────────────────────────────────────────────────────────────── */
 
   if (isLoading) {
     return (
@@ -647,15 +616,12 @@ export default function PortfolioPage() {
         </p>
       </div>
 
-      {/* Overview + Recommendation side-by-side */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* ───────── Overview Card ───────── */}
         <div className="space-y-6 flex flex-col h-full">
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">Overview</h2>
           </div>
           <div className="space-y-4 border rounded-lg p-6 md:flex md:items-center md:gap-8 flex-1">
-            {/* Circle diagram for average score */}
             <div className="flex justify-center pt-4">
               <div className="relative h-48 w-48 flex items-center justify-center">
                 <svg className="h-full w-full" viewBox="0 0 100 100">
@@ -740,7 +706,6 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        {/* ───────── NEW  Recommendation Card ───────── */}
         <div className="space-y-6 flex flex-col h-full">
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">Rekomendasi</h2>
@@ -769,10 +734,11 @@ export default function PortfolioPage() {
                       recommendation,
                       userData.desired_major
                     ) && (
-                      <p className="text-xs text-green-600 dark:text-green-400">
-                        Desired major sesuai dengan rumpun ilmu rekomendasi
-                      </p>
-                    )}
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          Program studi yang diminati sesuai dengan rumpun ilmu
+                          jurusan rekomendasi
+                        </p>
+                      )}
                   </>
                 )}
                 <button
@@ -799,7 +765,6 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Academic Records Section */}
       <div className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">Catatan Akademik</h2>
@@ -862,15 +827,14 @@ export default function PortfolioPage() {
                             </td>
                             <td className="py-3 px-2 text-center">
                               <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  getGradeFromScore(record.score) === "A"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                    : getGradeFromScore(
-                                          record.score
-                                        ).startsWith("B")
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
-                                }`}
+                                className={`px-2 py-1 rounded text-xs font-medium ${getGradeFromScore(record.score) === "A"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : getGradeFromScore(
+                                    record.score
+                                  ).startsWith("B")
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                                  }`}
                               >
                                 {getGradeFromScore(record.score)}
                               </span>
@@ -887,7 +851,6 @@ export default function PortfolioPage() {
         )}
       </div>
 
-      {/* Achievements & Organizations Section */}
       {(achievements.length > 0 || organizations.length > 0) && (
         <div className="md:col-span-3 space-y-8">
           {achievements.length > 0 && (

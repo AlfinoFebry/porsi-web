@@ -125,23 +125,62 @@ export default function InsertDataPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Validate required fields
+      if (!achievement.title.trim()) {
+        setMessage("Nama prestasi/sertifikat harus diisi");
+        return;
+      }
+
       let imageUrl: string | null = null;
       if (achievement.file) {
-        const filePath = `certifications/${user.id}/${Date.now()}_${achievement.file.name}`;
-        const { error: upError } = await supabase.storage.from("certifications").upload(filePath, achievement.file);
-        if (upError && upError.message !== "The resource already exists") throw upError;
-        const { data: publicData } = supabase.storage.from("certifications").getPublicUrl(filePath);
+        // Fix the file path - remove duplicate "certifications"
+        const filePath = `${user.id}/${Date.now()}_${achievement.file.name}`;
+
+        console.log('Uploading file to path:', filePath);
+
+        const { data: uploadData, error: upError } = await supabase.storage
+          .from("certifications")
+          .upload(filePath, achievement.file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (upError) {
+          console.error('Upload error:', upError);
+          if (upError.message.includes("already exists")) {
+            setMessage("File dengan nama yang sama sudah ada. Coba ganti nama file.");
+          } else if (upError.message.includes("Bucket not found") || upError.message.includes("bucket does not exist")) {
+            setMessage("Error: Storage bucket 'certifications' belum dibuat. Silakan buat bucket di Supabase Dashboard terlebih dahulu.");
+          } else if (upError.message.includes("row-level security policy") || upError.message.includes("Unauthorized")) {
+            setMessage("Error: Tidak memiliki izin upload. Silakan periksa RLS policies untuk storage bucket 'certifications'.");
+          } else {
+            throw upError;
+          }
+          return;
+        }
+
+        const { data: publicData } = supabase.storage
+          .from("certifications")
+          .getPublicUrl(filePath);
         imageUrl = publicData.publicUrl;
       }
+
       const { error: achError } = await supabase.from("sertifikat").insert({
         user_id: user.id,
         judul: achievement.title,
         image_url: imageUrl,
       });
-      if (achError) throw achError;
+
+      if (achError) {
+        console.error('Database insert error:', achError);
+        throw achError;
+      }
+
       setAchievement({ title: "", file: null });
       setMessage("Prestasi berhasil disimpan");
     } catch (e: any) {
+      console.error('Achievement submit error:', e);
       setMessage(e.message || "Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
@@ -188,7 +227,7 @@ export default function InsertDataPage() {
               // Use existing reportStep insertion logic: just call API directly similar to registration
               handleBulkInsert(data);
             }}
-            onBack={() => {}}
+            onBack={() => { }}
             isLoading={isSubmitting}
           />
         ) : <p>Memuat semester...</p>
