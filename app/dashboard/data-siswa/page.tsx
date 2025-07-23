@@ -65,110 +65,107 @@ export default function DataSiswaPage() {
   // Expandable cards state
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
-  const { user } = useUser();
+  const { user, isLoading: userLoading } = useUser();
   const { toast } = useToast();
   const supabase = createClient();
 
   useEffect(() => {
-    checkUserTypeAndFetchData();
-  }, [user]);
+    const loadData = async () => {
+      // Since UserProvider seems stuck, let's try direct auth check
+      if (userLoading) {
+        try {
+          const {
+            data: { user: directUser },
+            error,
+          } = await supabase.auth.getUser();
 
-  const checkUserTypeAndFetchData = async () => {
-    if (!user) return;
+          if (directUser) {
+            // Get user type directly
+            const { data: profileData, error: profileError } = await supabase
+              .from("profil")
+              .select("tipe_user")
+              .eq("id", directUser.id)
+              .single();
 
-    try {
-      // Check user type first
-      const { data: profileData, error } = await supabase
-        .from("profil")
-        .select("tipe_user")
-        .eq("id", user.id)
-        .single();
+            if (profileError || !profileData) {
+              setIsLoading(false);
+              return;
+            }
 
-      if (error || !profileData) {
-        console.error("Error fetching user profile:", error);
+            setUserType(profileData.tipe_user);
+
+            if (profileData.tipe_user === "admin") {
+              await fetchStudentDataDirect(directUser.id);
+            } else {
+              setIsLoading(false);
+            }
+            return;
+          } else {
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          // Fall back to waiting for UserProvider
+        }
+      }
+
+      if (!user) {
+        setIsLoading(false);
         return;
       }
 
-      setUserType(profileData.tipe_user);
+      try {
+        // Get user type
+        const { data: profileData, error } = await supabase
+          .from("profil")
+          .select("tipe_user")
+          .eq("id", user.id)
+          .single();
 
-      // Only fetch student data if user is admin
-      if (profileData.tipe_user === "admin") {
-        await fetchStudentData();
+        if (error || !profileData) {
+          setIsLoading(false);
+          return;
+        }
+
+        setUserType(profileData.tipe_user);
+
+        if (profileData.tipe_user === "admin") {
+          await fetchStudentDataDirect(user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error checking user type:", error);
-    }
-  };
+    };
 
-  useEffect(() => {
-    // Filter students based on search term and reset to first page
-    if (searchTerm.trim() === "") {
-      setFilteredStudents(students);
-    } else {
-      const filtered = students.filter(
-        (student) =>
-          student.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.nama_sekolah.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredStudents(filtered);
-    }
-    setCurrentPage(1); // Reset to first page when filtering
-  }, [searchTerm, students]);
+    loadData();
+  }, [user, userLoading]);
 
-  const fetchStudentData = async () => {
-    setIsLoading(true);
+  // Direct student data fetch function that bypasses UserProvider
+  const fetchStudentDataDirect = async (userId: string) => {
     try {
-      if (!user) return;
-
-      // First, get the admin's school name
+      // Get the admin's school name
       const { data: adminProfile, error: adminError } = await supabase
         .from("profil")
-        .select("nama_sekolah")
-        .eq("id", user.id)
+        .select("nama_sekolah, tipe_user")
+        .eq("id", userId)
         .single();
 
       if (adminError || !adminProfile?.nama_sekolah) {
-        console.error("Error fetching admin profile:", adminError);
-        toast({
-          title: "Error",
-          description: "Tidak dapat mengambil data sekolah admin.",
-          variant: "destructive",
-        });
+        setIsLoading(false);
         return;
       }
 
       const adminSchool = adminProfile.nama_sekolah;
-      console.log("Admin school name:", adminSchool);
-
-      // First, let's check if there are any students at all
-      const { data: allStudents, error: allStudentsError } = await supabase
-        .from("profil")
-        .select("id, nama, email, nama_sekolah, jurusan, kelas, tipe_user")
-        .eq("tipe_user", "siswa");
-
-      console.log("All students query error:", allStudentsError);
-      console.log("All students in database:", allStudents);
-
-      // Let's also check if we can see our own admin profile
-      const { data: adminCheck, error: adminCheckError } = await supabase
-        .from("profil")
-        .select("id, nama, email, nama_sekolah, tipe_user")
-        .eq("id", user.id)
-        .single();
-
-      console.log("Admin profile check error:", adminCheckError);
-      console.log("Admin profile check result:", adminCheck);
 
       // Fetch students from the same school (case-insensitive)
       const { data: studentsData, error: studentsError } = await supabase
         .from("profil")
         .select("id, nama, email, nama_sekolah, jurusan, kelas")
         .eq("tipe_user", "siswa")
-        .ilike("nama_sekolah", `%${adminSchool.trim()}%`) // Case-insensitive match with wildcards
+        .ilike("nama_sekolah", `%${adminSchool.trim()}%`)
         .order("nama");
-
-      console.log("Filtered students by school:", studentsData);
 
       if (studentsError) {
         throw studentsError;
@@ -195,8 +192,114 @@ export default function DataSiswaPage() {
       }));
 
       setStudents(studentsWithRecords);
+
+      toast({
+        title: "Berhasil",
+        description: `Berhasil memuat ${studentsWithRecords.length} data siswa.`,
+      });
     } catch (error) {
-      console.error("Error fetching student data:", error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data siswa. Silakan coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Filter students based on search term and reset to first page
+    if (searchTerm.trim() === "") {
+      setFilteredStudents(students);
+    } else {
+      const filtered = students.filter(
+        (student) =>
+          student.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.nama_sekolah.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredStudents(filtered);
+    }
+    setCurrentPage(1); // Reset to first page when filtering
+  }, [searchTerm, students]);
+
+  const fetchStudentData = async () => {
+    setIsLoading(true);
+    try {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // First, get the admin's school name
+      const { data: adminProfile, error: adminError } = await supabase
+        .from("profil")
+        .select("nama_sekolah, tipe_user")
+        .eq("id", user.id)
+        .single();
+
+      if (adminError || !adminProfile?.nama_sekolah) {
+        toast({
+          title: "Error",
+          description: "Tidak dapat mengambil data sekolah admin.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (adminProfile.tipe_user !== "admin") {
+        toast({
+          title: "Akses Ditolak",
+          description: "Anda tidak memiliki akses admin.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const adminSchool = adminProfile.nama_sekolah;
+
+      // Fetch students from the same school (case-insensitive)
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("profil")
+        .select("id, nama, email, nama_sekolah, jurusan, kelas")
+        .eq("tipe_user", "siswa")
+        .ilike("nama_sekolah", `%${adminSchool.trim()}%`) // Case-insensitive match with wildcards
+        .order("nama");
+
+      if (studentsError) {
+        throw studentsError;
+      }
+
+      // Fetch academic records for all students
+      const { data: recordsData, error: recordsError } = await supabase
+        .from("data_akademik")
+        .select("id, user_id, mapel, semester, nilai")
+        .order("mapel, semester");
+
+      if (recordsError) {
+        throw recordsError;
+      }
+
+      // Combine students with their academic records
+      const studentsWithRecords: StudentWithRecords[] = (
+        studentsData || []
+      ).map((student) => ({
+        ...student,
+        academic_records: (recordsData || []).filter(
+          (record) => record.user_id === student.id
+        ),
+      }));
+
+      setStudents(studentsWithRecords);
+
+      toast({
+        title: "Berhasil",
+        description: `Berhasil memuat ${studentsWithRecords.length} data siswa.`,
+      });
+    } catch (error) {
       toast({
         title: "Error",
         description: "Gagal memuat data siswa. Silakan coba lagi.",
@@ -282,7 +385,6 @@ export default function DataSiswaPage() {
 
       setEditingScore(null);
     } catch (error) {
-      console.error("Error updating score:", error);
       toast({
         title: "Error",
         description: "Gagal memperbarui nilai. Silakan coba lagi.",
@@ -302,37 +404,99 @@ export default function DataSiswaPage() {
   };
 
   const createTestData = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "User tidak ditemukan.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      // Get admin's school name first
+      // Get admin's full profile
       const { data: adminProfile, error: adminError } = await supabase
         .from("profil")
-        .select("nama_sekolah")
+        .select("id, nama, email, nama_sekolah, tipe_user")
         .eq("id", user.id)
         .single();
 
-      if (adminError || !adminProfile?.nama_sekolah) {
+      if (adminError || !adminProfile) {
         toast({
           title: "Error",
-          description: "Tidak dapat mengambil data sekolah admin.",
+          description: `Tidak dapat mengambil data admin: ${adminError?.message || "Unknown error"}`,
           variant: "destructive",
         });
         return;
       }
 
-      const adminSchool = adminProfile.nama_sekolah;
+      // Check all students in database
+      const { data: allStudents, error: allStudentsError } = await supabase
+        .from("profil")
+        .select("id, nama, email, nama_sekolah, tipe_user")
+        .eq("tipe_user", "siswa");
+
+      // Check students with similar school names
+      const { data: similarSchoolStudents, error: similarError } =
+        await supabase
+          .from("profil")
+          .select("id, nama, email, nama_sekolah, tipe_user")
+          .eq("tipe_user", "siswa")
+          .ilike("nama_sekolah", `%${adminProfile.nama_sekolah?.trim()}%`);
+
+      const debugInfo = {
+        adminProfile,
+        adminSchool: adminProfile.nama_sekolah,
+        totalStudents: allStudents?.length || 0,
+        studentsWithSimilarSchool: similarSchoolStudents?.length || 0,
+        allStudents:
+          allStudents?.map((s) => ({
+            nama: s.nama,
+            sekolah: s.nama_sekolah,
+          })) || [],
+        similarSchoolStudents:
+          similarSchoolStudents?.map((s) => ({
+            nama: s.nama,
+            sekolah: s.nama_sekolah,
+          })) || [],
+      };
 
       toast({
-        title: "Info",
-        description: `Admin school: "${adminSchool}". To test this feature, please register some students with the exact same school name through the regular registration process at /register.`,
+        title: "Debug Info",
+        description: `Admin: ${adminProfile.nama} (${adminProfile.tipe_user})
+School: "${adminProfile.nama_sekolah}"
+Total students in DB: ${debugInfo.totalStudents}
+Students with similar school: ${debugInfo.studentsWithSimilarSchool}
+Check console for detailed info.`,
         variant: "default",
       });
     } catch (error) {
-      console.error("Error creating test data:", error);
       toast({
         title: "Error",
-        description: "Terjadi kesalahan saat membuat data test.",
+        description: `Terjadi kesalahan: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const checkAuthStatus = async () => {
+    try {
+      const {
+        data: { user: authUser },
+        error,
+      } = await supabase.auth.getUser();
+
+      toast({
+        title: "Auth Status",
+        description: authUser
+          ? `Logged in as: ${authUser.email}`
+          : "Not logged in",
+        variant: authUser ? "default" : "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Auth Check Error",
+        description: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       });
     }
@@ -373,13 +537,71 @@ export default function DataSiswaPage() {
     return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
   };
 
-  if (isLoading) {
+  // Show loading only when actually loading
+  if (isLoading && !(students.length > 0)) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Data Siswa</h1>
-          <p className="text-muted-foreground mt-2">Loading...</p>
+          <p className="text-muted-foreground mt-2">Memuat data...</p>
         </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              {userLoading ? "Memuat data pengguna..." : "Memuat data siswa..."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show access denied message for non-admin users
+  if (userType && userType !== "admin") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Data Siswa</h1>
+          <p className="text-muted-foreground mt-2">
+            Kelola data dan nilai akademik siswa
+          </p>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Akses Ditolak</h3>
+            <p className="text-muted-foreground text-center">
+              Halaman ini hanya dapat diakses oleh admin sekolah. (User type:{" "}
+              {userType})
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show login required message if no user is authenticated
+  if (!user && !userLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Data Siswa</h1>
+          <p className="text-muted-foreground mt-2">
+            Kelola data dan nilai akademik siswa
+          </p>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              Autentikasi Diperlukan
+            </h3>
+            <p className="text-muted-foreground text-center">
+              Silakan login terlebih dahulu untuk mengakses halaman ini.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -404,15 +626,21 @@ export default function DataSiswaPage() {
             className="pl-10"
           />
         </div>
-        <div className="flex items-center gap-4">
-          {/* <Badge variant="secondary" className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-4">
+          <Badge variant="secondary" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             {filteredStudents.length} siswa
-          </Badge> */}
+          </Badge>
           <Button onClick={fetchStudentData} variant="outline" size="sm">
             Refresh Data
           </Button>
-        </div>
+          <Button onClick={createTestData} variant="outline" size="sm">
+            Debug Info
+          </Button>
+          <Button onClick={checkAuthStatus} variant="outline" size="sm">
+            Check Auth
+          </Button>
+        </div> */}
       </div>
 
       {/* Students List */}
@@ -421,11 +649,33 @@ export default function DataSiswaPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Tidak ada data siswa</h3>
-            <p className="text-muted-foreground text-center">
+            <p className="text-muted-foreground text-center mb-4">
               {searchTerm
                 ? "Tidak ada siswa yang sesuai dengan pencarian."
-                : "Belum ada siswa yang terdaftar dalam sistem."}
+                : userType === "admin"
+                  ? "Belum ada siswa yang terdaftar di sekolah Anda. Pastikan siswa mendaftar dengan nama sekolah yang sama dengan profil admin Anda."
+                  : "Belum ada siswa yang terdaftar dalam sistem."}
             </p>
+            {!searchTerm && userType === "admin" && (
+              <div className="flex gap-2">
+                <Button onClick={fetchStudentData} variant="outline" size="sm">
+                  Refresh Data
+                </Button>
+                <Button onClick={createTestData} variant="outline" size="sm">
+                  Lihat Info Debug
+                </Button>
+                <Button onClick={checkAuthStatus} variant="outline" size="sm">
+                  Check Auth
+                </Button>
+              </div>
+            )}
+            {!searchTerm && !userType && (
+              <div className="flex gap-2">
+                <Button onClick={checkAuthStatus} variant="outline" size="sm">
+                  Check Auth
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (

@@ -18,9 +18,19 @@ export default function AdminRegisterPage() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    // User is already authenticated, redirect directly to dashboard
-                    window.location.href = '/dashboard';
-                    return;
+                    // Check if user has an admin profile
+                    const { data: profile } = await supabase
+                        .from('profil')
+                        .select('tipe_user')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (profile && profile.tipe_user === 'admin') {
+                        // User is already an admin, redirect to dashboard
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+                    // If user is authenticated but not an admin, allow them to continue with admin registration
                 }
             } catch (error) {
                 console.error('Error checking auth status:', error);
@@ -37,7 +47,8 @@ export default function AdminRegisterPage() {
     };
 
     const handleAuthSuccess = () => {
-        // Redirect directly to dashboard after successful authentication
+        // Redirect to dashboard after successful authentication
+        // The dashboard will handle the proper routing based on user type
         window.location.href = '/dashboard';
     };
 
