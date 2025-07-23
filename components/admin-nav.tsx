@@ -27,7 +27,7 @@ interface AdminNavItem {
 
 export function AdminNav() {
     const pathname = usePathname();
-    const { user, profile } = useUser();
+    const { user } = useUser();
     const router = useRouter();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
@@ -142,7 +142,7 @@ export function AdminNav() {
                             </div>
                             <div className="flex items-center gap-1">
                                 <div className="text-sm font-medium">
-                                    {profile?.nama || user?.email?.split("@")[0]}
+                                    {user?.email?.split("@")[0]}
                                 </div>
                                 <ChevronDown className="h-4 w-4" />
                             </div>
@@ -209,7 +209,7 @@ export function AdminNav() {
                                 </div>
                                 <div className="flex flex-col">
                                     <div className="text-sm font-medium">
-                                        {profile?.nama || user?.email?.split("@")[0]}
+                                        {user?.email?.split("@")[0]}
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate max-w-[140px]">
                                         {user?.email}
