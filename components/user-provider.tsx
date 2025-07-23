@@ -4,22 +4,9 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
 
-type UserProfile = {
-  id: string;
-  nama: string;
-  email: string;
-  tipe_user: "siswa" | "alumni" | "admin";
-  nama_sekolah?: string;
-  jurusan?: string;
-  kelas?: string;
-  nama_perguruan_tinggi?: string;
-  jurusan_kuliah?: string;
-};
-
 type UserContextType = {
   user: User | null;
   userType: "siswa" | "alumni" | "admin" | null;
-  profile: UserProfile | null;
   isLoading: boolean;
   isProfileLoading: boolean;
 };
@@ -27,7 +14,6 @@ type UserContextType = {
 const UserContext = createContext<UserContextType>({
   user: null,
   userType: null,
-  profile: null,
   isLoading: true,
   isProfileLoading: true,
 });
@@ -37,32 +23,28 @@ export const useUser = () => useContext(UserContext);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userType, setUserType] = useState<"siswa" | "alumni" | "admin" | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchUserType = async (userId: string) => {
     try {
       setIsProfileLoading(true);
       const supabase = createClient();
 
       const { data: profileData, error } = await supabase
         .from("profil")
-        .select("id, nama, email, tipe_user, nama_sekolah, jurusan, kelas, nama_perguruan_tinggi, jurusan_kuliah")
+        .select("tipe_user")
         .eq("id", userId)
         .single();
 
       if (error) {
-        console.error("Profile fetch error:", error);
-        setProfile(null);
+        console.error("User type fetch error:", error);
         setUserType(null);
       } else if (profileData) {
-        setProfile(profileData);
         setUserType(profileData.tipe_user);
       }
     } catch (error) {
-      console.error("Profile fetch error:", error);
-      setProfile(null);
+      console.error("User type fetch error:", error);
       setUserType(null);
     } finally {
       setIsProfileLoading(false);
@@ -79,9 +61,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
 
       if (user) {
-        await fetchProfile(user.id);
+        await fetchUserType(user.id);
       } else {
-        setProfile(null);
         setUserType(null);
         setIsProfileLoading(false);
       }
@@ -96,9 +77,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
 
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          await fetchUserType(session.user.id);
         } else {
-          setProfile(null);
           setUserType(null);
           setIsProfileLoading(false);
         }
@@ -111,7 +91,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, userType, profile, isLoading, isProfileLoading }}>
+    <UserContext.Provider value={{ user, userType, isLoading, isProfileLoading }}>
       {children}
     </UserContext.Provider>
   );
