@@ -59,13 +59,15 @@ export function AdminAuthStep({ onSuccess }: AdminAuthStepProps) {
       const needsEmailConfirmation = authData.user.confirmed_at === null;
 
       if (needsEmailConfirmation) {
-        // Store admin info for later profile creation
+        // Store admin info for later profile creation using consistent key
         localStorage.setItem(
-          "pending_admin_profile",
+          "admin_registration_data",
           JSON.stringify({
-            userId: authData.user.id,
-            email: email,
             namaSekolah: namaSekolah,
+            isAdmin: true,
+            email: email,
+            userId: authData.user.id,
+            timestamp: new Date().toISOString(),
           })
         );
 
@@ -144,7 +146,7 @@ export function AdminAuthStep({ onSuccess }: AdminAuthStepProps) {
       console.log("Admin profile created successfully");
 
       // Clear any pending profile data
-      localStorage.removeItem("pending_admin_profile");
+      localStorage.removeItem("admin_registration_data");
     } catch (error) {
       console.error("Error in createAdminProfile:", error);
       throw error;
@@ -181,7 +183,7 @@ export function AdminAuthStep({ onSuccess }: AdminAuthStepProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect_to=/dashboard&admin=true`,
+          redirectTo: `${window.location.origin}/auth/callback?redirect_to=/dashboard`,
         },
       });
 
@@ -204,54 +206,27 @@ export function AdminAuthStep({ onSuccess }: AdminAuthStepProps) {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        // Check if this is from OAuth callback and we need to create profile
-        const adminRegData = localStorage.getItem("admin_registration_data");
-        const pendingProfile = localStorage.getItem("pending_admin_profile");
+        // Check if user already has an admin profile
+        const { data: existingProfile } = await supabase
+          .from("profil")
+          .select("id, tipe_user")
+          .eq("id", user.id)
+          .single();
 
-        if (adminRegData) {
-          try {
-            const regData = JSON.parse(adminRegData);
-            // Check if profile already exists
-            const { data: existingProfile } = await supabase
-              .from("profil")
-              .select("id, tipe_user")
-              .eq("id", user.id)
-              .single();
-
-            if (!existingProfile || existingProfile.tipe_user !== "admin") {
-              await createAdminProfile(
-                user.id,
-                user.email || "",
-                regData.namaSekolah
-              );
-            }
-
-            localStorage.removeItem("admin_registration_data");
-            // Redirect to dashboard
-            router.push("/dashboard");
-          } catch (error) {
-            console.error("Error creating profile after OAuth:", error);
-            setMessage({ error: "Gagal membuat profil admin" });
-          }
-        } else if (pendingProfile) {
-          // Handle pending profile from email confirmation
-          try {
-            const profileData = JSON.parse(pendingProfile);
-            if (profileData.userId === user.id) {
-              await createAdminProfile(
-                profileData.userId,
-                profileData.email,
-                profileData.namaSekolah
-              );
-              router.push("/dashboard");
-            }
-          } catch (error) {
-            console.error("Error creating pending profile:", error);
-            setMessage({ error: "Gagal membuat profil admin" });
-          }
-        } else {
-          // User is already logged in, redirect to dashboard
+        if (existingProfile && existingProfile.tipe_user === "admin") {
+          // User is already an admin, redirect to dashboard
           router.push("/dashboard");
+        } else {
+          // Check if we have pending admin registration data
+          const adminRegData = localStorage.getItem("admin_registration_data");
+
+          if (adminRegData) {
+            // Let AdminProfileHandler handle the profile creation
+            router.push("/dashboard");
+          } else {
+            // User is logged in but not an admin and no pending data
+            router.push("/dashboard");
+          }
         }
       }
     };
